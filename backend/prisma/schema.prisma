@@ -1,0 +1,116 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// SQLite does not support native Enums, using Strings
+// Role: STUDENT, PARENT, ADMIN
+// Tier: FREE, BASIC, STANDARD, PREMIUM
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  role          String    @default("STUDENT")
+  firstName     String?
+  lastName      String?
+  phone         String?
+  school        String?
+  class         String?
+  state         String?
+  streak        Int       @default(0)
+  lastActive    DateTime  @default(now())
+  points        Int       @default(0)
+  tier          String    @default("FREE")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Student specific
+  progress      Progress[]
+  attempts      ExamAttempt[]
+  
+  // Relationships
+  children      ParentChild[] @relation("ParentToChildren")
+  parents       ParentChild[] @relation("ChildToParents")
+}
+
+model ParentChild {
+  id        String @id @default(cuid())
+  parentId  String
+  childId   String
+  parent    User   @relation("ParentToChildren", fields: [parentId], references: [id])
+  child     User   @relation("ChildToParents", fields: [childId], references: [id])
+
+  @@unique([parentId, childId])
+}
+
+model Subject {
+  id        String     @id @default(cuid())
+  name      String     @unique
+  code      String     @unique
+  lessons   Lesson[]
+  questions Question[]
+}
+
+model Lesson {
+  id          String     @id @default(cuid())
+  title       String
+  videoUrl    String?
+  duration    String?
+  week        Int        @default(1)
+  order       Int        @default(1)
+  locked      Boolean    @default(true)
+  subjectId   String
+  subject     Subject    @relation(fields: [subjectId], references: [id])
+  progress    Progress[]
+}
+
+model Progress {
+  id         String   @id @default(cuid())
+  userId     String
+  lessonId   String
+  completed  Boolean  @default(false)
+  percentage Int      @default(0)
+  updatedAt  DateTime @default(now()) @updatedAt
+  user       User     @relation(fields: [userId], references: [id])
+  lesson     Lesson   @relation(fields: [lessonId], references: [id])
+
+  @@unique([userId, lessonId])
+}
+
+model Question {
+  id          String   @id @default(cuid())
+  text        String
+  options     String   // JSON stringified array
+  answer      String
+  explanation String?
+  year        Int
+  topic       String?
+  subjectId   String
+  subject     Subject  @relation(fields: [subjectId], references: [id])
+}
+
+model ExamAttempt {
+  id               String   @id @default(cuid())
+  userId           String
+  score            Int
+  total            Int
+  duration         Int      // in seconds
+  date             DateTime @default(now())
+  subjectBreakdown String   // JSON stringified object
+  user             User     @relation(fields: [userId], references: [id])
+}
+
+model Subscription {
+  id        String   @id @default(cuid())
+  userId    String
+  status    String   // success, pending, failed
+  reference String   @unique
+  amount    Int
+  plan      String
+  date      DateTime @default(now())
+}
