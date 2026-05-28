@@ -10,6 +10,7 @@ import Lessons from './pages/Lessons';
 import LiveClasses from './pages/LiveClasses';
 import Leaderboard from './pages/Leaderboard';
 import Upgrade from './pages/Upgrade';
+import Settings from './pages/Settings';
 import PaymentVerify from './pages/PaymentVerify';
 import { AuthProvider } from './context/AuthContext';
 import DashboardLayout from './components/layout/DashboardLayout';
@@ -33,6 +34,7 @@ export default function App() {
             <Route path="/live" element={<LiveClasses />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/upgrade" element={<Upgrade />} />
+            <Route path="/settings" element={<Settings />} />
           </Route>
 
           {/* Full Screen Pages */}

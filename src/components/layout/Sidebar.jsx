@@ -10,7 +10,8 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
-  GraduationCap
+  GraduationCap,
+  Settings as SettingsIcon
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -22,6 +23,7 @@ const navItems = [
   { icon: Target, label: 'Mock Exam', to: '/exam' },
   { icon: Gem, label: 'Upgrade', to: '/upgrade' },
   { icon: Trophy, label: 'Leaderboard', to: '/leaderboard' },
+  { icon: SettingsIcon, label: 'Settings', to: '/settings' },
 ];
 
 export default function Sidebar({ collapsed, onToggle }) {
