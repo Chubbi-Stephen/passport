@@ -12,9 +12,11 @@ import {
   Users
 } from 'lucide-react';
 import { api } from '../utils/api';
+import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
   const navigate = useNavigate();
+  const { login: setAuth } = useAuth();
   const [role, setRole] = useState('STUDENT');
   const [show, setShow] = useState(false);
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -27,8 +29,7 @@ export default function Login() {
     setLoading(true);
     try {
       const data = await api.login({ ...formData, role });
-      localStorage.setItem('passport_token', data.token);
-      localStorage.setItem('passport_user', JSON.stringify(data.user));
+      setAuth(data.user, data.token);
       
       if (data.user.role === 'PARENT') navigate('/parent');
       else navigate('/dashboard');

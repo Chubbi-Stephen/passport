@@ -14,11 +14,13 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { api } from '../utils/api';
+import { useAuth } from '../context/AuthContext';
 
 const steps = ['Account','Profile','Subjects','Plan'];
 
 export default function Register() {
   const navigate = useNavigate();
+  const { login: setAuth } = useAuth();
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -53,14 +55,13 @@ export default function Register() {
     setLoading(true);
     try {
       const data = await api.register(formData);
-      localStorage.setItem('passport_token', data.token);
-      localStorage.setItem('passport_user', JSON.stringify(data.user));
+      setAuth(data.user, data.token);
       
       if (data.user.role === 'PARENT') navigate('/parent');
       else navigate('/dashboard');
     } catch (err) {
       setError(err.message || 'Registration failed.');
-      setStep(0); // Go back to first step to fix errors if any
+      setStep(0); 
     } finally {
       setLoading(false);
     }

@@ -1,17 +1,25 @@
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { 
   Search, 
   Bell, 
   Flame, 
   AlertTriangle, 
   Trophy, 
-  Calendar,
-  CheckCircle2
+  Calendar
 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 export default function Topbar({ title, subtitle }) {
   const [notifOpen, setNotifOpen] = useState(false);
+  const { user } = useAuth();
+
+  const getInitials = () => {
+    if (!user) return '??';
+    const first = user.firstName?.[0] || '';
+    const last = user.lastName?.[0] || '';
+    return (first + last).toUpperCase() || user.email[0].toUpperCase();
+  };
 
   return (
     <header style={{
@@ -47,7 +55,7 @@ export default function Topbar({ title, subtitle }) {
         {/* Streak */}
         <div style={{ display:'flex', alignItems:'center', gap:6, background:'var(--clr-accent-50)', padding:'6px 12px', borderRadius:999, border:'1px solid rgba(244,169,36,0.2)' }}>
           <Flame size={16} color="var(--clr-accent)" fill="var(--clr-accent)" />
-          <span style={{ fontSize:'0.8125rem', fontWeight:700, color:'var(--clr-accent-dark)' }}>14</span>
+          <span style={{ fontSize:'0.8125rem', fontWeight:700, color:'var(--clr-accent-dark)' }}>{user?.streak || 0}</span>
         </div>
 
         {/* Notifications */}
@@ -100,7 +108,7 @@ export default function Topbar({ title, subtitle }) {
         </div>
 
         {/* Avatar */}
-        <div className="avatar avatar-md" style={{ cursor:'pointer' }}>AO</div>
+        <div className="avatar avatar-md" style={{ cursor:'pointer' }}>{getInitials()}</div>
       </div>
     </header>
   );

@@ -19,6 +19,11 @@ export const api = {
     if (!res.ok) throw new Error((await res.json()).message);
     return res.json();
   },
+  getCurrentUser: async () => {
+    const res = await fetch(`${API_BASE_URL}/auth/me`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch user');
+    return res.json();
+  },
   register: async (userData) => {
     const res = await fetch(`${API_BASE_URL}/auth/register`, {
       method: 'POST',

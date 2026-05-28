@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   BookOpen, 
@@ -13,6 +12,7 @@ import {
   LogOut,
   GraduationCap
 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', to: '/dashboard' },
@@ -26,6 +26,18 @@ const navItems = [
 
 export default function Sidebar({ collapsed, onToggle }) {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
+  const getInitials = () => {
+    if (!user) return '??';
+    return ((user.firstName?.[0] || '') + (user.lastName?.[0] || '')).toUpperCase() || user.email[0].toUpperCase();
+  };
 
   return (
     <>
@@ -128,18 +140,19 @@ export default function Sidebar({ collapsed, onToggle }) {
         {!collapsed && (
           <div style={{ padding:'16px', borderTop:'1px solid rgba(255,255,255,0.08)' }}>
             <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-              <div className="avatar avatar-md" style={{ flexShrink:0 }}>AO</div>
+              <div className="avatar avatar-md" style={{ flexShrink:0 }}>{getInitials()}</div>
               <div style={{ flex:1, minWidth:0 }}>
-                <div style={{ fontSize:'0.875rem', fontWeight:600, color:'white', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>Adaeze Okonkwo</div>
-                <div style={{ fontSize:'0.75rem', color:'rgba(255,255,255,0.4)' }}>SS3 · WAEC + JAMB</div>
+                <div style={{ fontSize:'0.875rem', fontWeight:600, color:'white', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{user?.firstName} {user?.lastName}</div>
+                <div style={{ fontSize:'0.75rem', color:'rgba(255,255,255,0.4)' }}>{user?.class || 'Student'} · {user?.tier || 'FREE'}</div>
               </div>
-              <Link to="/login" title="Sign out" style={{ color:'rgba(255,255,255,0.4)', display:'flex', alignItems:'center', transition:'color var(--ease)' }} onMouseEnter={e=>e.currentTarget.style.color='white'} onMouseLeave={e=>e.currentTarget.style.color='rgba(255,255,255,0.4)'}>
+              <button onClick={handleLogout} title="Sign out" style={{ color:'rgba(255,255,255,0.4)', display:'flex', alignItems:'center', transition:'color var(--ease)', background:'none', border:'none', cursor:'pointer' }} onMouseEnter={e=>e.currentTarget.style.color='white'} onMouseLeave={e=>e.currentTarget.style.color='rgba(255,255,255,0.4)'}>
                 <LogOut size={18} />
-              </Link>
+              </button>
             </div>
           </div>
         )}
       </aside>
+
     </>
   );
 }
