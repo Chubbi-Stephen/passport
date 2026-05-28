@@ -41,9 +41,9 @@ export default function Login() {
   };
 
   return (
-    <div style={{ minHeight:'100vh', display:'grid', gridTemplateColumns:'1fr 1fr' }}>
+    <div className="grid-2" style={{ minHeight:'100vh', gap:0 }}>
       {/* Left panel */}
-      <div style={{ background:'linear-gradient(160deg, #071812 0%, #0A6640 100%)', display:'flex', flexDirection:'column', justifyContent:'space-between', padding:'48px', position:'relative', overflow:'hidden' }}>
+      <div className="mobile-hidden" style={{ background:'linear-gradient(160deg, #071812 0%, #0A6640 100%)', display:'flex', flexDirection:'column', justifyContent:'space-between', padding:'48px', position:'relative', overflow:'hidden' }}>
         <div style={{ position:'absolute', bottom:-100, right:-100, width:400, height:400, borderRadius:'50%', background:'radial-gradient(circle, rgba(244,169,36,0.1) 0%, transparent 70%)' }} />
         <Link to="/" style={{ display:'flex', alignItems:'center', gap:10 }}>
           <div style={{ width:38, height:38, borderRadius:10, background:'linear-gradient(135deg, var(--clr-accent), #e8961a)', display:'flex', alignItems:'center', justifyContent:'center', color:'white' }}><GraduationCap size={20} /></div>

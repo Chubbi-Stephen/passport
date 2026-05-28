@@ -72,9 +72,9 @@ export default function Register() {
   };
 
   return (
-    <div style={{ minHeight:'100vh', display:'grid', gridTemplateColumns:'1fr 1fr' }}>
+    <div className="grid-2" style={{ minHeight:'100vh', gap:0 }}>
       {/* Left */}
-      <div style={{ background:'linear-gradient(160deg, #071812 0%, #0A3D2E 100%)', padding:48, display:'flex', flexDirection:'column', justifyContent:'space-between', position:'relative', overflow:'hidden' }}>
+      <div className="mobile-hidden" style={{ background:'linear-gradient(160deg, #071812 0%, #0A3D2E 100%)', padding:48, display:'flex', flexDirection:'column', justifyContent:'space-between', position:'relative', overflow:'hidden' }}>
         <div style={{ position:'absolute', top:-80, right:-80, width:300, height:300, borderRadius:'50%', background:'radial-gradient(circle, rgba(244,169,36,0.12) 0%, transparent 70%)' }} />
         <Link to="/" style={{ display:'flex', alignItems:'center', gap:10 }}>
           <div style={{ width:38, height:38, borderRadius:10, background:'linear-gradient(135deg, var(--clr-accent), #e8961a)', display:'flex', alignItems:'center', justifyContent:'center', color:'white' }}><GraduationCap size={20} /></div>

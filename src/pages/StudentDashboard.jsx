@@ -11,8 +11,6 @@ import {
   Rocket,
   ChevronRight
 } from 'lucide-react';
-import Sidebar from '../components/layout/Sidebar';
-import Topbar from '../components/layout/Topbar';
 import { api } from '../utils/api';
 
 function StatCard({ icon: Icon, label, value, sub, color }) {
@@ -32,7 +30,6 @@ function StatCard({ icon: Icon, label, value, sub, color }) {
 
 export default function StudentDashboard() {
   const navigate = useNavigate();
-  const [collapsed, setCollapsed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
 
@@ -51,17 +48,13 @@ export default function StudentDashboard() {
     fetchData();
   }, [navigate]);
 
-  if (loading) return <div style={{ display:'flex', height:'100vh', alignItems:'center', justifyContent:'center', color:'var(--clr-primary)', fontWeight:700 }}>Loading Dashboard...</div>;
+  if (loading) return <div style={{ display:'flex', minHeight:'50vh', alignItems:'center', justifyContent:'center', color:'var(--clr-primary)', fontWeight:700 }}>Loading Dashboard...</div>;
   if (!data) return null;
 
   const { user, recentAttempts, overallProgress } = data;
 
   return (
-    <div className="app-shell">
-      <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(v => !v)} />
-      <div className="app-main">
-        <Topbar title={`Good morning, ${user.firstName || 'Student'} 👋`} subtitle={new Date().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' })} />
-        <div className="page-content">
+    <>
 
           {/* Exam countdown banner */}
           <div style={{ background:'linear-gradient(135deg, #071812, #0A6640)', borderRadius:'var(--r-xl)', padding:'20px 28px', marginBottom:24, display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:16 }}>
@@ -82,14 +75,14 @@ export default function StudentDashboard() {
           </div>
 
           {/* Stats row */}
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16, marginBottom:24 }}>
+          <div className="grid-4" style={{ marginBottom:24 }}>
             <StatCard icon={Flame} label="Study Streak" value={user.streak} sub="days in a row" color="#F4A924" />
             <StatCard icon={BookOpen} label="Lessons Done" value={overallProgress} sub="total completed" color="#0A6640" />
             <StatCard icon={BarChart3} label="Avg Mock Score" value={recentAttempts.length ? `${Math.round(recentAttempts.reduce((acc,curr)=>acc+curr.score,0)/recentAttempts.length)}%` : '0%'} sub="last sessions" color="#2563EB" />
             <StatCard icon={Gem} label="PassPort Points" value={user.points} sub="rank: Silver" color="#16A34A" />
           </div>
 
-          <div style={{ display:'grid', gridTemplateColumns:'1.4fr 1fr', gap:24, marginBottom:24 }}>
+          <div className="grid-2" style={{ marginBottom:24 }}>
             {/* Recent Mocks */}
             <div className="card" style={{ padding:0, overflow:'hidden' }}>
               <div style={{ padding:'20px 24px', borderBottom:'1px solid var(--clr-border-light)', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
@@ -126,11 +119,11 @@ export default function StudentDashboard() {
                 <h3 style={{ fontFamily:'var(--font-display)', fontWeight:700, fontSize:'0.9375rem', display:'flex', alignItems:'center', gap:8 }}>Weekly Progress <Flame size={16} color="var(--clr-accent)" /></h3>
                 <span style={{ fontFamily:'var(--font-display)', fontSize:'1.25rem', fontWeight:800, color:'var(--clr-accent)' }}>{user.streak}</span>
               </div>
-              <div style={{ display:'flex', gap:8, justifyContent:'space-between' }}>
+              <div style={{ display:'flex', gap:8, justifyContent:'space-between', flexWrap:'wrap' }}>
                 {['M','T','W','T','F','S','S'].map((day, i) => {
                   const isActive = i < (user.streak % 7);
                   return (
-                    <div key={i} style={{ flex:1, textAlign:'center' }}>
+                    <div key={i} style={{ flex:'1 1 auto', minWidth:32, textAlign:'center' }}>
                       <div style={{ height:36, borderRadius:8, background: isActive ? 'linear-gradient(135deg, var(--clr-accent), #e8961a)' : 'var(--clr-bg)', border: isActive ? 'none' : '1px solid var(--clr-border)', display:'flex', alignItems:'center', justifyContent:'center', color:'white', marginBottom:6 }}>
                         {isActive ? <Flame size={14} fill="white" /> : ''}
                       </div>
@@ -152,7 +145,7 @@ export default function StudentDashboard() {
           {/* Personalized recommendations */}
           <div className="card">
             <h3 style={{ fontFamily:'var(--font-display)', fontWeight:700, fontSize:'1rem', marginBottom:16 }}>AI Recommendations</h3>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
+            <div className="grid-2">
               <div style={{ padding:16, border:'1px solid var(--clr-border)', borderRadius:12, display:'flex', gap:12 }}>
                 <div style={{ color:'var(--clr-warning)', flexShrink:0 }}><Lightbulb size={24} /></div>
                 <div>
@@ -172,8 +165,6 @@ export default function StudentDashboard() {
             </div>
           </div>
 
-        </div>
-      </div>
-    </div>
+    </>
   );
 }

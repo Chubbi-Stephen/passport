@@ -50,7 +50,7 @@ export default function Sidebar({ collapsed, onToggle }) {
         />
       )}
 
-      <aside className="sidebar" style={{
+      <aside className={`sidebar ${!collapsed ? 'open' : ''}`} style={{
         width: collapsed ? '72px' : 'var(--sidebar-w)',
         background: 'var(--clr-bg-sidebar)',
         height: '100vh',

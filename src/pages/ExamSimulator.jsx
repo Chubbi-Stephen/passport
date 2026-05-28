@@ -130,26 +130,26 @@ export default function ExamSimulator() {
   return (
     <div style={{ height:'100vh', display:'flex', flexDirection:'column', background:'#F0F4F1' }}>
       {/* Exam header */}
-      <div style={{ background:'var(--clr-bg-sidebar)', padding:'0 24px', height:60, display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
-        <div style={{ display:'flex', alignItems:'center', gap:16 }}>
+      <div style={{ background:'var(--clr-bg-sidebar)', padding:'0 16px', minHeight:68, display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0, flexWrap:'wrap', gap:10 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:12 }}>
           <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-            <div style={{ width:32, height:32, borderRadius:8, background:'linear-gradient(135deg, var(--clr-accent), #e8961a)', display:'flex', alignItems:'center', justifyContent:'center', color:'white' }}><GraduationCap size={18} /></div>
-            <span style={{ fontFamily:'var(--font-display)', fontWeight:700, color:'white', fontSize:'1rem' }}>PassPort CBT</span>
+            <div style={{ width:28, height:28, borderRadius:8, background:'linear-gradient(135deg, var(--clr-accent), #e8961a)', display:'flex', alignItems:'center', justifyContent:'center', color:'white' }}><GraduationCap size={16} /></div>
+            <span style={{ fontFamily:'var(--font-display)', fontWeight:700, color:'white', fontSize:'0.9rem' }}>PassPort</span>
           </div>
-          <div style={{ width:1, height:30, background:'rgba(255,255,255,0.1)' }} />
-          <span style={{ fontSize:'0.8125rem', color:'rgba(255,255,255,0.5)' }}>JAMB Mock Examination 2025</span>
+          <div className="mobile-hidden" style={{ width:1, height:24, background:'rgba(255,255,255,0.1)' }} />
+          <span className="mobile-hidden" style={{ fontSize:'0.75rem', color:'rgba(255,255,255,0.5)' }}>JAMB Mock 2025</span>
         </div>
-        <div style={{ display:'flex', alignItems:'center', gap:20 }}>
-          <div style={{ textAlign:'center' }}>
-            <div style={{ fontSize:'0.65rem', color:'rgba(255,255,255,0.4)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:2 }}>Time Left</div>
-            <div style={{ fontFamily:'var(--font-display)', fontSize:'1.375rem', fontWeight:800, color:timeColor }}>{formatTime(timeLeft)}</div>
+        <div style={{ display:'flex', alignItems:'center', gap:12, flex:1, justifyContent:'flex-end' }}>
+          <div style={{ textAlign:'right' }}>
+            <div style={{ fontSize:'0.6rem', color:'rgba(255,255,255,0.4)', textTransform:'uppercase', letterSpacing:'0.05em' }}>Time</div>
+            <div style={{ fontFamily:'var(--font-display)', fontSize:'1.125rem', fontWeight:800, color:timeColor, lineHeight:1 }}>{formatTime(timeLeft)}</div>
           </div>
-          <div style={{ width:1, height:30, background:'rgba(255,255,255,0.1)' }} />
-          <div style={{ textAlign:'center' }}>
-            <div style={{ fontSize:'0.65rem', color:'rgba(255,255,255,0.4)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:2 }}>Answered</div>
-            <div style={{ fontFamily:'var(--font-display)', fontSize:'1.375rem', fontWeight:800, color:'white' }}>{answered}/{examQuestions.length}</div>
+          <div style={{ width:1, height:24, background:'rgba(255,255,255,0.1)' }} />
+          <div style={{ textAlign:'right' }}>
+            <div style={{ fontSize:'0.6rem', color:'rgba(255,255,255,0.4)', textTransform:'uppercase', letterSpacing:'0.05em' }}>Done</div>
+            <div style={{ fontFamily:'var(--font-display)', fontSize:'1.125rem', fontWeight:800, color:'white', lineHeight:1 }}>{answered}</div>
           </div>
-          <button onClick={()=>{ clearInterval(timerRef.current); setSubmitted(true); }} className="btn btn-accent btn-sm" style={{ borderRadius:999, marginLeft:8, gap:8 }}><Send size={14} /> Submit Exam</button>
+          <button onClick={()=>{ clearInterval(timerRef.current); setSubmitted(true); }} className="btn btn-accent btn-sm" style={{ borderRadius:999, padding:'8px 12px', fontSize:'0.7rem' }}>Submit</button>
         </div>
       </div>
 
@@ -158,9 +158,9 @@ export default function ExamSimulator() {
         <div style={{ height:'100%', background:timeColor, width:`${pct*100}%`, transition:'width 1s linear, background 0.5s' }} />
       </div>
 
-      <div style={{ flex:1, display:'grid', gridTemplateColumns:'220px 1fr 200px', gap:0, overflow:'hidden' }}>
-        {/* Subject panel */}
-        <div style={{ background:'white', borderRight:'1px solid var(--clr-border-light)', padding:20, overflowY:'auto' }}>
+      <div className="app-shell" style={{ flex:1, overflow:'hidden', position:'relative' }}>
+        {/* Subject panel (Sidebar behavior) */}
+        <div className="mobile-hidden" style={{ width:220, background:'white', borderRight:'1px solid var(--clr-border-light)', padding:20, overflowY:'auto' }}>
           <div style={{ fontSize:'0.7rem', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.08em', color:'var(--clr-text-muted)', marginBottom:16 }}>Subjects</div>
           {['English','Mathematics','Biology','Chemistry','Physics'].map(sub => {
             const subQs = examQuestions.filter(q=>q.subject===sub);
@@ -175,23 +175,23 @@ export default function ExamSimulator() {
         </div>
 
         {/* Question area */}
-        <div style={{ padding:'28px 32px', overflowY:'auto' }}>
-          <div style={{ display:'flex', gap:10, marginBottom:24, alignItems:'center' }}>
-            <span className="badge" style={{ background:subjectColors[q.subject], color:'var(--clr-text-primary)', fontWeight:600, fontSize:'0.75rem' }}>{q.subject}</span>
-            <span style={{ fontSize:'0.875rem', color:'var(--clr-text-muted)' }}>Question {current+1} of {examQuestions.length}</span>
-            <button onClick={()=>setFlagged(v=>{ const n=new Set(v); n.has(q.id)?n.delete(q.id):n.add(q.id); return n; })} style={{ marginLeft:'auto', background: flagged.has(q.id)?'var(--clr-warning-bg)':'transparent', border:`1px solid ${flagged.has(q.id)?'var(--clr-warning)':'var(--clr-border)'}`, color: flagged.has(q.id)?'var(--clr-warning)':'var(--clr-text-muted)', borderRadius:'var(--r-sm)', padding:'6px 12px', fontSize:'0.8125rem', cursor:'pointer', display:'flex', alignItems:'center', gap:6 }}>
-              {flagged.has(q.id)?<><FlagOff size={14} /> Unflag</>:<><Flag size={14} /> Flag Question</>}
+        <div style={{ flex:1, padding: '16px', overflowY:'auto', display:'flex', flexDirection:'column' }}>
+          <div style={{ display:'flex', gap:10, marginBottom:16, alignItems:'center', flexWrap:'wrap' }}>
+            <span className="badge" style={{ background:subjectColors[q.subject], color:'var(--clr-text-primary)', fontWeight:600, fontSize:'0.7rem' }}>{q.subject}</span>
+            <span style={{ fontSize:'0.75rem', color:'var(--clr-text-muted)' }}>Q{current+1} of {examQuestions.length}</span>
+            <button onClick={()=>setFlagged(v=>{ const n=new Set(v); n.has(q.id)?n.delete(q.id):n.add(q.id); return n; })} style={{ marginLeft:'auto', background: flagged.has(q.id)?'var(--clr-warning-bg)':'transparent', border:`1px solid ${flagged.has(q.id)?'var(--clr-warning)':'var(--clr-border)'}`, color: flagged.has(q.id)?'var(--clr-warning)':'var(--clr-text-muted)', borderRadius:'var(--r-sm)', padding:'6px 10px', fontSize:'0.75rem', cursor:'pointer' }}>
+              {flagged.has(q.id)?<FlagOff size={12} />:<Flag size={12} />}
             </button>
           </div>
 
-          <div style={{ background:'white', borderRadius:'var(--r-xl)', padding:32, marginBottom:24, border:'1px solid var(--clr-border-light)' }}>
-            <p style={{ fontSize:'1.0625rem', lineHeight:1.8, fontWeight:500, color:'var(--clr-text-primary)', marginBottom:28 }}>{q.text}</p>
-            <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+          <div className="card" style={{ padding:'20px', marginBottom:20, border:'1px solid var(--clr-border-light)' }}>
+            <p style={{ fontSize:'1rem', lineHeight:1.6, fontWeight:500, color:'var(--clr-text-primary)', marginBottom:24 }}>{q.text}</p>
+            <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
               {q.options.map((opt,i) => {
                 const letter = opt[0];
                 const sel = answers[q.id] === letter;
                 return (
-                  <button key={i} onClick={()=>setAnswers(v=>({...v,[q.id]:letter}))} style={{ padding:'14px 20px', borderRadius:'var(--r-md)', border:`2px solid ${sel?'var(--clr-primary)':'var(--clr-border)'}`, background:sel?'var(--clr-primary-50)':'white', textAlign:'left', fontSize:'0.9375rem', cursor:'pointer', color:sel?'var(--clr-primary)':'var(--clr-text-primary)', fontWeight:sel?600:400, transition:'all var(--ease)' }}>
+                  <button key={i} onClick={()=>setAnswers(v=>({...v,[q.id]:letter}))} style={{ padding:'16px', borderRadius:'var(--r-md)', border:`2px solid ${sel?'var(--clr-primary)':'var(--clr-border)'}`, background:sel?'var(--clr-primary-50)':'white', textAlign:'left', fontSize:'0.9rem', width:'100%', cursor:'pointer' }}>
                     {opt}
                   </button>
                 );
@@ -199,28 +199,20 @@ export default function ExamSimulator() {
             </div>
           </div>
 
-          <div style={{ display:'flex', gap:12 }}>
-            <button onClick={()=>setCurrent(v=>Math.max(0,v-1))} disabled={current===0} className="btn btn-outline" style={{ gap:8 }}><ChevronLeft size={18} /> Previous</button>
-            <button onClick={()=>setCurrent(v=>Math.min(examQuestions.length-1,v+1))} disabled={current===examQuestions.length-1} className="btn btn-primary" style={{ marginLeft:'auto', gap:8 }}>Next <ChevronRight size={18} /></button>
+          <div style={{ display:'flex', gap:10, marginTop:'auto' }}>
+            <button onClick={()=>setCurrent(v=>Math.max(0,v-1))} disabled={current===0} className="btn btn-outline" style={{ flex:1, padding:'14px' }}><ChevronLeft size={18} /></button>
+            <button onClick={()=>setCurrent(v=>Math.min(examQuestions.length-1,v+1))} disabled={current===examQuestions.length-1} className="btn btn-primary" style={{ flex:2, padding:'14px' }}>Next <ChevronRight size={18} /></button>
           </div>
         </div>
 
-        {/* Question grid */}
-        <div style={{ background:'white', borderLeft:'1px solid var(--clr-border-light)', padding:16, overflowY:'auto' }}>
+        {/* Question grid (Desktop Overlay / Mobile Hidden) */}
+        <div className="mobile-hidden" style={{ width:200, background:'white', borderLeft:'1px solid var(--clr-border-light)', padding:16, overflowY:'auto' }}>
           <div style={{ fontSize:'0.7rem', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.08em', color:'var(--clr-text-muted)', marginBottom:12 }}>Question Map</div>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:6 }}>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:4 }}>
             {examQuestions.map((qn,i) => (
-              <button key={qn.id} onClick={()=>setCurrent(i)} style={{ aspectRatio:'1', borderRadius:6, border:`2px solid ${i===current?'var(--clr-primary)':answers[qn.id]?'var(--clr-primary)':flagged.has(qn.id)?'var(--clr-warning)':'var(--clr-border)'}`, background: i===current?'var(--clr-primary)':answers[qn.id]?'var(--clr-primary-100)':flagged.has(qn.id)?'var(--clr-warning-bg)':'transparent', color: i===current?'white':'var(--clr-text-primary)', fontSize:'0.7rem', fontWeight:700, cursor:'pointer', transition:'all 0.15s', display:'flex', alignItems:'center', justifyContent:'center' }}>
+              <button key={qn.id} onClick={()=>setCurrent(i)} style={{ aspectRatio:'1', borderRadius:6, border:`2px solid ${i===current?'var(--clr-primary)':answers[qn.id]?'var(--clr-primary)':flagged.has(qn.id)?'var(--clr-warning)':'var(--clr-border)'}`, background: i===current?'var(--clr-primary)':answers[qn.id]?'var(--clr-primary-100)':flagged.has(qn.id)?'var(--clr-warning-bg)':'transparent', color: i===current?'white':'var(--clr-text-primary)', fontSize:'0.65rem', fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
                 {i+1}
               </button>
-            ))}
-          </div>
-          <div style={{ marginTop:16, display:'flex', flexDirection:'column', gap:8, fontSize:'0.7rem' }}>
-            {[['var(--clr-primary-100)','Answered'],['var(--clr-warning-bg)','Flagged'],['white','Not answered']].map(([bg,l])=>(
-              <div key={l} style={{ display:'flex', alignItems:'center', gap:8 }}>
-                <div style={{ width:14, height:14, borderRadius:4, background:bg, border:'1px solid var(--clr-border)', flexShrink:0 }} />
-                <span style={{ color:'var(--clr-text-muted)' }}>{l}</span>
-              </div>
             ))}
           </div>
         </div>

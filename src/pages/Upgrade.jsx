@@ -45,64 +45,58 @@ export default function Upgrade() {
   if (!user) return null;
 
   return (
-    <div className="app-shell">
-      <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(v => !v)} />
-      <div className="app-main">
-        <Topbar title="Upgrade Your Account" subtitle="Unlock the full power of PassPort" />
-        <div className="page-content" style={{ maxWidth: 1000, margin: '0 auto' }}>
-          
-          <div style={{ textAlign: 'center', marginBottom: 48 }}>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '2.5rem', fontWeight: 800, marginBottom: 12 }}>Choose the right <span style={{ color: 'var(--clr-primary)' }}>plan for success</span></h2>
-            <p style={{ color: 'var(--clr-text-muted)', fontSize: '1.1rem' }}>Invest in your future. Get the tools you need to crush JAMB & WAEC.</p>
-          </div>
+    <>
+      <div style={{ maxWidth: 1000, margin: '0 auto' }}>
+        <div style={{ textAlign: 'center', marginBottom: 48 }}>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '2.5rem', fontWeight: 800, marginBottom: 12 }}>Choose the right <span style={{ color: 'var(--clr-primary)' }}>plan for success</span></h2>
+          <p style={{ color: 'var(--clr-text-muted)', fontSize: '1.1rem' }}>Invest in your future. Get the tools you need to crush JAMB & WAEC.</p>
+        </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
-            {plans.map((p) => {
-              const isCurrent = user.tier === p.id;
-              return (
-                <div key={p.id} className="card" style={{ display: 'flex', flexDirection: 'column', border: isCurrent ? '2px solid var(--clr-primary)' : '1px solid var(--clr-border)', position: 'relative' }}>
-                  {isCurrent && <span className="badge badge-primary" style={{ position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)', padding: '6px 16px' }}>Current Plan</span>}
-                  
-                  <div style={{ padding: '24px 24px 0' }}>
-                    <div style={{ fontWeight: 700, fontSize: '1.25rem', marginBottom: 8 }}>{p.name}</div>
-                    <div style={{ fontSize: '0.9rem', color: 'var(--clr-text-muted)', marginBottom: 24, minHeight: 40 }}>{p.desc}</div>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 32 }}>
-                      <span style={{ fontSize: '2.5rem', fontWeight: 800, fontFamily: 'var(--font-display)' }}>₦{p.price.toLocaleString()}</span>
-                      <span style={{ color: 'var(--clr-text-muted)', fontSize: '0.9rem' }}>/month</span>
-                    </div>
-                  </div>
-
-                  <div style={{ flex: 1, padding: '0 24px 24px' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 32 }}>
-                      {p.features.map((f, i) => (
-                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap:10, fontSize: '0.875rem', color: 'var(--clr-text-secondary)' }}>
-                          <Check size={16} color="var(--clr-success)" strokeWidth={3} /> {f}
-                        </div>
-                      ))}
-                    </div>
-                    
-                    <button 
-                      onClick={() => handleUpgrade(p)}
-                      disabled={loading || isCurrent || p.price === 0}
-                      className={`btn w-full ${isCurrent ? 'btn-outline' : 'btn-primary'}`}
-                      style={{ justifyContent: 'center', padding: '14px' }}
-                    >
-                      {isCurrent ? 'Current Plan' : p.price === 0 ? 'Free Forever' : `Upgrade to ${p.name}`}
-                    </button>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 24 }}>
+          {plans.map((p) => {
+            const isCurrent = user.tier === p.id;
+            return (
+              <div key={p.id} className="card" style={{ display: 'flex', flexDirection: 'column', border: isCurrent ? '2px solid var(--clr-primary)' : '1px solid var(--clr-border)', position: 'relative' }}>
+                {isCurrent && <span className="badge badge-primary" style={{ position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)', padding: '6px 16px' }}>Current Plan</span>}
+                
+                <div style={{ padding: '24px 24px 0' }}>
+                  <div style={{ fontWeight: 700, fontSize: '1.25rem', marginBottom: 8 }}>{p.name}</div>
+                  <div style={{ fontSize: '0.9rem', color: 'var(--clr-text-muted)', marginBottom: 24, minHeight: 40 }}>{p.desc}</div>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 32 }}>
+                    <span style={{ fontSize: '2.5rem', fontWeight: 800, fontFamily: 'var(--font-display)' }}>₦{p.price.toLocaleString()}</span>
+                    <span style={{ color: 'var(--clr-text-muted)', fontSize: '0.9rem' }}>/month</span>
                   </div>
                 </div>
-              );
-            })}
-          </div>
 
-          <div className="card" style={{ marginTop: 48, background: 'var(--clr-bg)', textAlign: 'center', padding: '32px' }}>
-            <div style={{ color: 'var(--clr-success)', marginBottom: 16, display: 'flex', justifyContent: 'center' }}><ShieldCheck size={48} /></div>
-            <h3 style={{ fontWeight: 700, marginBottom: 8 }}>Secure Payments by Paystack</h3>
-            <p style={{ color: 'var(--clr-text-muted)', fontSize: '0.875rem', maxWidth: 500, margin: '0 auto' }}>Your payment information is encrypted and never stored on our servers. You can cancel your subscription at any time from your settings.</p>
-          </div>
+                <div style={{ flex: 1, padding: '0 24px 24px' }}>
+                  <div style={{ display:'flex', flexDirection:'column', gap:12, marginBottom:32 }}>
+                    {p.features.map((f, i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap:10, fontSize: '0.875rem', color: 'var(--clr-text-secondary)' }}>
+                        <Check size={16} color="var(--clr-success)" strokeWidth={3} /> {f}
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <button 
+                    onClick={() => handleUpgrade(p)}
+                    disabled={loading || isCurrent || p.price === 0}
+                    className={`btn w-full ${isCurrent ? 'btn-outline' : 'btn-primary'}`}
+                    style={{ justifyContent: 'center', padding: '14px' }}
+                  >
+                    {isCurrent ? 'Current Plan' : p.price === 0 ? 'Free Forever' : `Upgrade to ${p.name}`}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
 
+        <div className="card" style={{ marginTop: 48, background: 'var(--clr-bg)', textAlign: 'center', padding: '32px' }}>
+          <div style={{ color: 'var(--clr-success)', marginBottom: 16, display: 'flex', justifyContent: 'center' }}><ShieldCheck size={48} /></div>
+          <h3 style={{ fontWeight: 700, marginBottom: 8 }}>Secure Payments by Paystack</h3>
+          <p style={{ color: 'var(--clr-text-muted)', fontSize: '0.875rem', maxWidth: 500, margin: '0 auto' }}>Your payment information is encrypted and never stored on our servers.</p>
         </div>
       </div>
-    </div>
+    </>
   );
 }
