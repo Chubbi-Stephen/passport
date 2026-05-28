@@ -25,7 +25,7 @@ export default function Topbar({ title, subtitle, onMenuClick }) {
   return (
     <header style={{
       height: 'var(--navbar-h)',
-      background: 'white',
+      background: 'var(--clr-bg-card)',
       borderBottom: '1px solid var(--clr-border-light)',
       display: 'flex',
       alignItems: 'center',
@@ -80,13 +80,13 @@ export default function Topbar({ title, subtitle, onMenuClick }) {
             <span style={{
               position:'absolute', top:6, right:6, width:8, height:8,
               background:'var(--clr-danger)', borderRadius:999,
-              border:'2px solid white',
+              border:'2px solid var(--clr-bg-card)',
             }} />
           </button>
           {notifOpen && (
             <div style={{
               position:'absolute', right:0, top:'calc(100% + 8px)',
-              width:280, background:'white', borderRadius:'var(--r-lg)',
+              width:280, background:'var(--clr-bg-card)', borderRadius:'var(--r-lg)',
               boxShadow:'var(--shadow-lg)', border:'1px solid var(--clr-border-light)',
               zIndex:200,
             }}>

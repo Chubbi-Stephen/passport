@@ -13,8 +13,10 @@ import {
   Monitor
 } from 'lucide-react';
 
+import { useTheme } from '../context/ThemeContext';
+
 export default function Settings() {
-  const [theme, setTheme] = useState('system');
+  const { theme, setTheme } = useTheme();
   const [notifications, setNotifications] = useState({
     streaks: true,
     results: true,
@@ -62,7 +64,7 @@ export default function Settings() {
                       padding: '12px', 
                       borderRadius: 'var(--r-md)', 
                       border: theme === mode.id ? '2px solid var(--clr-primary)' : '1px solid var(--clr-border)',
-                      background: theme === mode.id ? 'var(--clr-primary-50)' : 'white',
+                      background: theme === mode.id ? 'var(--clr-primary-50)' : 'var(--clr-bg-card)',
                       cursor: 'pointer',
                       display: 'flex',
                       flexDirection: 'column',
