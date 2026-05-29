@@ -117,12 +117,8 @@ export default function Practice() {
     if (totalAnswered === 0) return navigate('/dashboard');
     setSubmitting(true);
     try {
-      await api.submitExam({
-        score: totalCorrect,
-        total: questions.length,
-        duration: 0,
-        answers: Object.entries(selected).map(([id, ans]) => ({ id, ans }))
-      });
+      // Practice sessions don't use the formal exam grading flow —
+      // just navigate back. The streak is updated on Mock Exam completion.
       navigate('/dashboard');
     } catch (err) {
       console.error(err);

@@ -56,12 +56,24 @@ export const api = {
     const res = await fetch(`${API_BASE_URL}/student/practice?${query}`, { headers: getHeaders() });
     return res.json();
   },
-  submitExam: async (examData) => {
-    const res = await fetch(`${API_BASE_URL}/student/exam/submit`, {
+  startExam: async (examConfig) => {
+    const res = await fetch(`${API_BASE_URL}/student/exam/start`, {
       method: 'POST',
       headers: getHeaders(),
-      body: JSON.stringify(examData),
+      body: JSON.stringify(examConfig),
     });
+    return res.json();
+  },
+  finishExam: async (examResults) => {
+    const res = await fetch(`${API_BASE_URL}/student/exam/finish`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(examResults),
+    });
+    return res.json();
+  },
+  getSubjects: async () => {
+    const res = await fetch(`${API_BASE_URL}/admin/subjects`, { headers: getHeaders() });
     return res.json();
   },
   getLeaderboard: async () => {

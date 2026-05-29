@@ -12,12 +12,20 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
+// Request logger for debugging
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  next();
+});
+
 // Routes
 const authRoutes = require('./routes/auth');
 const studentRoutes = require('./routes/student');
 const parentRoutes = require('./routes/parent');
 const paymentRoutes = require('./routes/payment');
 const adminRoutes = require('./routes/admin');
+
+app.get('/api/health', (req, res) => res.json({ status: 'ok', msg: 'API is reachable' }));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/student', studentRoutes);

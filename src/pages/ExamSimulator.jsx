@@ -1,38 +1,21 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { api } from '../utils/api';
 import { 
   Target, 
   Clock, 
-  BarChart3, 
-  Rocket, 
   ArrowLeft, 
-  ArrowRight, 
   Flag, 
   FlagOff, 
   CheckCircle2, 
   GraduationCap,
   ChevronLeft,
   ChevronRight,
-  Send
+  Trophy,
+  AlertCircle
 } from 'lucide-react';
 
-const TOTAL_TIME = 100 * 60; // 100 minutes
-
-const examQuestions = [
-  { id:1, subject:'English', text:'Choose the word that is most nearly opposite in meaning to the word in capitals. TACITURN:', options:['A. Talkative','B. Silent','C. Moody','D. Angry'], answer:'A' },
-  { id:2, subject:'English', text:'From the options below, choose the one that has the same vowel sound as the word: FEAT', options:['A. Feat','B. Fat','C. Fate','D. Fit'], answer:'A' },
-  { id:3, subject:'Mathematics', text:'Simplify: (2³ × 2⁴) ÷ 2⁵', options:['A. 2','B. 4','C. 8','D. 16'], answer:'B' },
-  { id:4, subject:'Mathematics', text:'If the sum of the roots of 2x² + 3x - 5 = 0 is m, find m.', options:['A. -3/2','B. 3/2','C. -5/2','D. 5/2'], answer:'A' },
-  { id:5, subject:'Biology', text:'The organelle responsible for protein synthesis in a cell is the:', options:['A. Mitochondria','B. Nucleus','C. Ribosome','D. Golgi apparatus'], answer:'C' },
-  { id:6, subject:'Biology', text:'Which of the following is NOT a function of the human skeleton?', options:['A. Support','B. Protection','C. Digestion','D. Movement'], answer:'C' },
-  { id:7, subject:'Chemistry', text:'What is the oxidation number of sulphur in H₂SO₄?', options:['A. +2','B. +4','C. +6','D. +8'], answer:'C' },
-  { id:8, subject:'Chemistry', text:'Which of the following is a noble gas?', options:['A. Fluorine','B. Chlorine','C. Nitrogen','D. Argon'], answer:'D' },
-  { id:9, subject:'Physics', text:'The unit of electric potential difference is the:', options:['A. Ampere','B. Ohm','C. Volt','D. Watt'], answer:'C' },
-  { id:10, subject:'Physics', text:'A car accelerates uniformly from rest to 20 m/s in 4 seconds. Its acceleration is:', options:['A. 2 m/s²','B. 5 m/s²','C. 10 m/s²','D. 80 m/s²'], answer:'B' },
-  ...Array.from({length:30}, (_,i) => ({ id:i+11, subject:['Mathematics','Biology','Chemistry','Physics','English'][i%5], text:`Sample question ${i+11}: This is a sample JAMB CBT question testing your knowledge of the subject matter.`, options:['A. Option A','B. Option B','C. Option C','D. Option D'], answer:'A' }))
-];
-
-const subjectColors = { English:'#DBEAFE', Mathematics:'#DCFCE7', Biology:'#EBF5F0', Chemistry:'#FEF3C7', Physics:'#FEE2E2' };
+const TOTAL_TIME = 40 * 60; // 40 minutes per subject for mock
 
 function formatTime(secs) {
   const m = Math.floor(secs/60), s = secs%60;
@@ -40,181 +23,281 @@ function formatTime(secs) {
 }
 
 export default function ExamSimulator() {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [subjects, setSubjects] = useState([]);
+  const [selectedSubjectId, setSelectedSubjectId] = useState('');
   const [started, setStarted] = useState(false);
+  const [examData, setExamData] = useState([]);
+  const [sessionId, setSessionId] = useState(null);
   const [current, setCurrent] = useState(0);
   const [answers, setAnswers] = useState({});
+  const [flagged, setFlagged] = useState(new Set());
   const [timeLeft, setTimeLeft] = useState(TOTAL_TIME);
   const [submitted, setSubmitted] = useState(false);
-  const [flagged, setFlagged] = useState(new Set());
+  const [resultData, setResultData] = useState(null);
   const timerRef = useRef(null);
 
+  // Load available subjects
+  useEffect(() => {
+    const fetchSubjects = async () => {
+      try {
+        const data = await api.getSubjects();
+        setSubjects(data);
+        if (data.length > 0) setSelectedSubjectId(data[0].id);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchSubjects();
+  }, []);
+
+  // Timer logic
   useEffect(() => {
     if (started && !submitted) {
       timerRef.current = setInterval(() => {
-        setTimeLeft(v => { if (v <= 1) { clearInterval(timerRef.current); setSubmitted(true); return 0; } return v - 1; });
+        setTimeLeft(v => {
+          if (v <= 1) {
+            handleComplete();
+            return 0;
+          }
+          return v - 1;
+        });
       }, 1000);
     }
     return () => clearInterval(timerRef.current);
   }, [started, submitted]);
 
-  const answered = Object.keys(answers).length;
-  const correct = submitted ? Object.entries(answers).filter(([id, ans]) => examQuestions.find(q=>q.id===parseInt(id))?.answer === ans).length : 0;
-  const score = Math.round((correct / examQuestions.length) * 100);
-  const pct = timeLeft / TOTAL_TIME;
-  const timeColor = pct > 0.4 ? 'var(--clr-success)' : pct > 0.15 ? 'var(--clr-warning)' : 'var(--clr-danger)';
+  const handleStart = async () => {
+    if (!selectedSubjectId) return;
+    setLoading(true);
+    try {
+      const data = await api.startExam({ 
+        subjectId: selectedSubjectId,
+        questionCount: 40 
+      });
+      setExamData(data.questions);
+      setSessionId(data.sessionId);
+      setStarted(true);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to start exam. Make sure you have questions for this subject.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  if (!started) return (
-    <div style={{ minHeight:'100vh', background:'linear-gradient(135deg, #071812, #0A3D2E)', display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
-      <div style={{ background:'white', borderRadius:'var(--r-2xl)', padding:48, maxWidth:540, width:'100%', textAlign:'center', boxShadow:'0 40px 80px rgba(0,0,0,0.3)' }}>
-        <div style={{ color:'var(--clr-accent)', marginBottom:20, display:'flex', justifyContent:'center' }}><Target size={64} /></div>
-        <h1 style={{ fontFamily:'var(--font-display)', fontSize:'2rem', fontWeight:800, marginBottom:12 }}>JAMB CBT Mock Exam</h1>
-        <p style={{ color:'var(--clr-text-secondary)', lineHeight:1.7, marginBottom:28 }}>Simulates the actual JAMB CBT interface. 40 questions across 4 subjects. <strong>100 minutes.</strong> No going back after submission.</p>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:16, marginBottom:32 }}>
-          {[{icon:GraduationCap,label:'40 Questions',sub:'JAMB-style', color:'var(--clr-primary)'},{icon:Clock,label:'100 Minutes',sub:'Timed exam', color:'var(--clr-warning)'},{icon:BarChart3,label:'Score Report',sub:'With analysis', color:'var(--clr-success)'}].map((s,i)=>(
-            <div key={i} style={{ background:'var(--clr-bg)', borderRadius:'var(--r-md)', padding:'16px 12px' }}>
-              <div style={{ color:s.color, marginBottom:8, display:'flex', justifyContent:'center' }}><s.icon size={28} /></div>
-              <div style={{ fontWeight:700, fontSize:'0.875rem' }}>{s.label}</div>
-              <div style={{ fontSize:'0.75rem', color:'var(--clr-text-muted)', marginTop:4 }}>{s.sub}</div>
-            </div>
-          ))}
-        </div>
-        <button className="btn btn-primary btn-lg" style={{ width:'100%', justifyContent:'center', marginBottom:12, gap:8 }} onClick={()=>setStarted(true)}><Rocket size={20} /> Start Exam Now</button>
-        <Link to="/practice"><button className="btn btn-ghost" style={{ width:'100%', justifyContent:'center', fontSize:'0.875rem', gap:8 }}><ArrowLeft size={16} /> Back to Practice</button></Link>
+  const handleComplete = async () => {
+    clearInterval(timerRef.current);
+    setLoading(true);
+    try {
+      const responses = Object.entries(answers).map(([qId, selectedOption]) => ({
+        questionId: qId,
+        selectedOption
+      }));
+
+      const data = await api.finishExam({
+        sessionId,
+        responses
+      });
+      setResultData(data);
+      setSubmitted(true);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to submit exam.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleFlag = (id) => {
+    setFlagged(v => {
+      const n = new Set(v);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  };
+
+  if (loading && !started) return (
+    <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ textAlign: 'center' }}>
+        <div className="animate-spin" style={{ marginBottom: 12 }}><Clock size={40} /></div>
+        <h3>Prepping your exam...</h3>
       </div>
     </div>
   );
 
-  if (submitted) {
-    const subjectBreakdown = ['Mathematics','Biology','Chemistry','Physics','English'].map(sub => {
-      const qs = examQuestions.filter(q=>q.subject===sub);
-      const right = qs.filter(q=>answers[q.id]===q.answer).length;
-      return { sub, right, total:qs.length, pct:Math.round((right/qs.length)*100) };
-    });
+  // Setup / Welcome Screen
+  if (!started) return (
+    <div style={{ minHeight:'100vh', background:'linear-gradient(135deg, #071812, #0A3D2E)', display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
+      <div style={{ background:'white', borderRadius:32, padding:48, maxWidth:540, width:'100%', textAlign:'center', boxShadow:'0 40px 80px rgba(0,0,0,0.3)' }}>
+        <div style={{ color:'var(--clr-primary)', marginBottom:20, display:'flex', justifyContent:'center' }}><Target size={64} /></div>
+        <h1 style={{ fontFamily:'var(--font-display)', fontSize:'2.25rem', fontWeight:800, marginBottom:12, color: 'var(--clr-text-primary)' }}>Standard Mock Exam</h1>
+        <p style={{ color:'var(--clr-text-secondary)', lineHeight:1.7, marginBottom:32 }}>Simulate the real CBT environment. Questions are randomized and timed.</p>
+        
+        <div className="form-group" style={{ marginBottom: 32, textAlign: 'left' }}>
+          <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--clr-text-muted)', marginBottom: 8, display: 'block' }}>CHOOSE SUBJECT</label>
+          <select 
+            className="form-select" 
+            style={{ width: '100%', height: 56, fontSize: '1rem', borderRadius: 16 }}
+            value={selectedSubjectId}
+            onChange={(e) => setSelectedSubjectId(e.target.value)}
+          >
+            {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+        </div>
+
+        <button className="btn btn-primary btn-lg w-full" style={{ height: 64, borderRadius: 20, fontSize: '1.25rem', justifyContent: 'center' }} onClick={handleStart}>
+          Enter Exam Hall
+        </button>
+        <button className="btn btn-ghost w-full mt-4" onClick={() => navigate('/dashboard')}>Back to Dashboard</button>
+      </div>
+    </div>
+  );
+
+  // Result Screen
+  if (submitted && resultData) {
+    const { result, pointsAwarded } = resultData;
+    const score = Math.round(result.score);
     return (
-      <div style={{ minHeight:'100vh', background:'var(--clr-bg)', display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
-        <div style={{ maxWidth:640, width:'100%' }}>
-          <div style={{ background:'linear-gradient(135deg, #071812, #0A6640)', borderRadius:'var(--r-xl)', padding:40, textAlign:'center', marginBottom:24, color:'white' }}>
-            <div style={{ fontSize:64, marginBottom:12 }}>{score>=70?'🎉':score>=50?'😐':'😔'}</div>
-            <div style={{ fontFamily:'var(--font-display)', fontSize:'4rem', fontWeight:800, color:'var(--clr-accent)', lineHeight:1 }}>{score}%</div>
-            <div style={{ fontSize:'1.125rem', marginTop:8, opacity:0.8 }}>{correct} / {examQuestions.length} correct</div>
-            <div style={{ marginTop:16, padding:'12px 20px', background:'rgba(255,255,255,0.08)', borderRadius:'var(--r-md)', fontSize:'0.9rem', opacity:0.7 }}>
-              {score>=70?'Excellent performance! Keep it up.':score>=50?'Good effort. Focus on your weak areas.':'More practice needed. Don\'t give up!'}
+      <div style={{ minHeight:'100vh', background:'#f8fafc', padding: '40px 24px' }}>
+        <div style={{ maxWidth: 800, margin: '0 auto' }}>
+          <div className="card animate-fadeInUp" style={{ padding: 48, textAlign: 'center', marginBottom: 24, background: 'white', borderRadius: 32 }}>
+            <div style={{ color: 'var(--clr-success)', marginBottom: 16 }}><Trophy size={80} /></div>
+            <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '3rem', fontWeight: 800, marginBottom: 8 }}>Exam Completed!</h1>
+            <p style={{ fontSize: '1.25rem', color: 'var(--clr-text-secondary)', marginBottom: 40 }}>Excellent work, Candidate.</p>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 40 }}>
+              <div style={{ padding: 24, background: 'var(--clr-bg)', borderRadius: 24 }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--clr-text-muted)', textTransform: 'uppercase' }}>FINAL SCORE</div>
+                <div style={{ fontSize: '3.5rem', fontWeight: 900, color: 'var(--clr-primary)' }}>{score}%</div>
+                <div style={{ fontSize: '0.85rem', color: 'var(--clr-text-muted)' }}>{result.correct} / {result.total} Correct</div>
+              </div>
+              <div style={{ padding: 24, background: 'var(--clr-primary-50)', borderRadius: 24, border: '2px solid var(--clr-primary)' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--clr-primary)', textTransform: 'uppercase' }}>POINTS EARNED</div>
+                <div style={{ fontSize: '3.5rem', fontWeight: 900, color: 'var(--clr-primary)' }}>+{pointsAwarded}</div>
+                <div style={{ fontSize: '0.85rem', color: 'var(--clr-text-muted)' }}>Streak Updated! 🔥</div>
+              </div>
             </div>
-          </div>
-          <div className="card" style={{ marginBottom:20 }}>
-            <h3 style={{ fontFamily:'var(--font-display)', fontWeight:700, marginBottom:16 }}>📊 Subject Breakdown</h3>
-            <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
-              {subjectBreakdown.map(s => (
-                <div key={s.sub}>
-                  <div style={{ display:'flex', justifyContent:'space-between', marginBottom:6, fontSize:'0.875rem' }}>
-                    <span style={{ fontWeight:600 }}>{s.sub}</span>
-                    <span style={{ color: s.pct>=70?'var(--clr-success)':s.pct>=50?'var(--clr-warning)':'var(--clr-danger)', fontWeight:700 }}>{s.right}/{s.total} ({s.pct}%)</span>
-                  </div>
-                  <div className="progress"><div className="progress-bar" style={{ width:`${s.pct}%`, background:s.pct>=70?'var(--clr-success)':s.pct>=50?'var(--clr-warning)':'var(--clr-danger)' }} /></div>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div style={{ display:'flex', gap:12 }}>
-            <button onClick={()=>{ setSubmitted(false); setStarted(false); setAnswers({}); setCurrent(0); setTimeLeft(TOTAL_TIME); setFlagged(new Set()); }} className="btn btn-outline" style={{ flex:1, justifyContent:'center', gap:8 }}>Retake Exam</button>
-            <Link to="/dashboard" style={{ flex:1, display:'flex' }}><button className="btn btn-primary" style={{ flex:1, justifyContent:'center', gap:8 }}><ArrowLeft size={18} /> Dashboard</button></Link>
-            <Link to="/practice" style={{ flex:1, display:'flex' }}><button className="btn btn-accent" style={{ flex:1, justifyContent:'center', gap:8 }}>Practice Weak Areas <ChevronRight size={18} /></button></Link>
+
+            <button className="btn btn-primary btn-lg w-full" onClick={() => navigate('/dashboard')}>Return to Dashboard</button>
           </div>
         </div>
       </div>
     );
   }
 
-  const q = examQuestions[current];
+  const q = examData && examData.length > 0 ? examData[current] : null;
+  const pct = timeLeft / TOTAL_TIME;
+  const timeColor = pct > 0.3 ? 'white' : 'var(--clr-danger)';
 
   return (
-    <div style={{ height:'100vh', display:'flex', flexDirection:'column', background:'#F0F4F1' }}>
-      {/* Exam header */}
-      <div style={{ background:'var(--clr-bg-sidebar)', padding:'0 16px', minHeight:68, display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0, flexWrap:'wrap', gap:10 }}>
-        <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-            <div style={{ width:28, height:28, borderRadius:8, background:'linear-gradient(135deg, var(--clr-accent), #e8961a)', display:'flex', alignItems:'center', justifyContent:'center', color:'white' }}><GraduationCap size={16} /></div>
-            <span style={{ fontFamily:'var(--font-display)', fontWeight:700, color:'white', fontSize:'0.9rem' }}>PassPort</span>
+    <div style={{ height:'100vh', display:'flex', flexDirection:'column', background:'#F1F5F9' }}>
+      {/* Exam Hall Header */}
+      <div style={{ background: '#0F172A', padding: '0 24px', height: 72, display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'white' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <GraduationCap className="text-accent" />
+          <div>
+            <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Candidate Mode</div>
+            <div style={{ fontSize: '1rem', fontWeight: 800 }}>Standard CBT Simulator</div>
           </div>
-          <div className="mobile-hidden" style={{ width:1, height:24, background:'rgba(255,255,255,0.1)' }} />
-          <span className="mobile-hidden" style={{ fontSize:'0.75rem', color:'rgba(255,255,255,0.5)' }}>JAMB Mock 2025</span>
         </div>
-        <div style={{ display:'flex', alignItems:'center', gap:12, flex:1, justifyContent:'flex-end' }}>
-          <div style={{ textAlign:'right' }}>
-            <div style={{ fontSize:'0.6rem', color:'rgba(255,255,255,0.4)', textTransform:'uppercase', letterSpacing:'0.05em' }}>Time</div>
-            <div style={{ fontFamily:'var(--font-display)', fontSize:'1.125rem', fontWeight:800, color:timeColor, lineHeight:1 }}>{formatTime(timeLeft)}</div>
+
+        <div style={{ display: 'flex', gap: 32, alignItems: 'center' }}>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: '0.65rem', fontWeight: 700, opacity: 0.5 }}>TIME REMAINING</div>
+            <div style={{ fontSize: '1.5rem', fontWeight: 900, color: timeColor, fontFamily: 'monospace' }}>{formatTime(timeLeft)}</div>
           </div>
-          <div style={{ width:1, height:24, background:'rgba(255,255,255,0.1)' }} />
-          <div style={{ textAlign:'right' }}>
-            <div style={{ fontSize:'0.6rem', color:'rgba(255,255,255,0.4)', textTransform:'uppercase', letterSpacing:'0.05em' }}>Done</div>
-            <div style={{ fontFamily:'var(--font-display)', fontSize:'1.125rem', fontWeight:800, color:'white', lineHeight:1 }}>{answered}</div>
-          </div>
-          <button onClick={()=>{ clearInterval(timerRef.current); setSubmitted(true); }} className="btn btn-accent btn-sm" style={{ borderRadius:999, padding:'8px 12px', fontSize:'0.7rem' }}>Submit</button>
+          <button onClick={handleComplete} className="btn btn-accent btn-sm" style={{ fontWeight: 800 }}>SUBMIT EXAM</button>
         </div>
       </div>
 
-      {/* Timer bar */}
-      <div style={{ height:4, background:'rgba(0,0,0,0.1)', flexShrink:0 }}>
-        <div style={{ height:'100%', background:timeColor, width:`${pct*100}%`, transition:'width 1s linear, background 0.5s' }} />
-      </div>
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+        {/* Left Navigator (Question Map) */}
+        <div className="mobile-hidden" style={{ width: 280, background: 'white', borderRight: '1px solid var(--clr-border)', padding: 24, overflowY: 'auto' }}>
+          <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--clr-text-muted)', textTransform: 'uppercase', marginBottom: 16 }}>Question Map</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+            {examData.map((qn, i) => {
+              const isCurrent = current === i;
+              const isAnswered = !!answers[qn.id];
+              const isFlagged = flagged.has(qn.id);
+              
+              let bg = '#F1F5F9', color = '#64748B', border = '1px solid transparent';
+              if (isCurrent) { bg = 'var(--clr-primary)'; color = 'white'; }
+              else if (isFlagged) { bg = '#FEF3C7'; color = '#D97706'; border = '1px solid #FCD34D'; }
+              else if (isAnswered) { bg = '#DCFCE7'; color = '#15803D'; }
 
-      <div className="app-shell" style={{ flex:1, overflow:'hidden', position:'relative' }}>
-        {/* Subject panel (Sidebar behavior) */}
-        <div className="mobile-hidden" style={{ width:220, background:'white', borderRight:'1px solid var(--clr-border-light)', padding:20, overflowY:'auto' }}>
-          <div style={{ fontSize:'0.7rem', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.08em', color:'var(--clr-text-muted)', marginBottom:16 }}>Subjects</div>
-          {['English','Mathematics','Biology','Chemistry','Physics'].map(sub => {
-            const subQs = examQuestions.filter(q=>q.subject===sub);
-            const subDone = subQs.filter(q=>answers[q.id]).length;
-            return (
-              <button key={sub} onClick={()=>setCurrent(examQuestions.findIndex(q=>q.subject===sub))} style={{ width:'100%', padding:'10px 12px', borderRadius:'var(--r-sm)', marginBottom:6, background: q.subject===sub ? subjectColors[sub] : 'transparent', border:`1px solid ${q.subject===sub?'var(--clr-primary)':'transparent'}`, textAlign:'left', cursor:'pointer', transition:'all var(--ease)' }}>
-                <div style={{ fontSize:'0.8125rem', fontWeight:600, color:q.subject===sub?'var(--clr-primary)':'var(--clr-text-primary)' }}>{sub}</div>
-                <div style={{ fontSize:'0.7rem', color:'var(--clr-text-muted)', marginTop:3 }}>{subDone}/{subQs.length} done</div>
-              </button>
-            );
-          })}
+              return (
+                <button 
+                  key={qn.id} 
+                  onClick={() => setCurrent(i)}
+                  style={{ 
+                    height: 48, borderRadius: 12, background: bg, color: color, 
+                    border, fontSize: '0.875rem', fontWeight: 800 
+                  }}
+                >
+                  {i + 1}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Question area */}
-        <div style={{ flex:1, padding: '16px', overflowY:'auto', display:'flex', flexDirection:'column' }}>
-          <div style={{ display:'flex', gap:10, marginBottom:16, alignItems:'center', flexWrap:'wrap' }}>
-            <span className="badge" style={{ background:subjectColors[q.subject], color:'var(--clr-text-primary)', fontWeight:600, fontSize:'0.7rem' }}>{q.subject}</span>
-            <span style={{ fontSize:'0.75rem', color:'var(--clr-text-muted)' }}>Q{current+1} of {examQuestions.length}</span>
-            <button onClick={()=>setFlagged(v=>{ const n=new Set(v); n.has(q.id)?n.delete(q.id):n.add(q.id); return n; })} style={{ marginLeft:'auto', background: flagged.has(q.id)?'var(--clr-warning-bg)':'transparent', border:`1px solid ${flagged.has(q.id)?'var(--clr-warning)':'var(--clr-border)'}`, color: flagged.has(q.id)?'var(--clr-warning)':'var(--clr-text-muted)', borderRadius:'var(--r-sm)', padding:'6px 10px', fontSize:'0.75rem', cursor:'pointer' }}>
-              {flagged.has(q.id)?<FlagOff size={12} />:<Flag size={12} />}
-            </button>
-          </div>
-
-          <div className="card" style={{ padding:'20px', marginBottom:20, border:'1px solid var(--clr-border-light)' }}>
-            <p style={{ fontSize:'1rem', lineHeight:1.6, fontWeight:500, color:'var(--clr-text-primary)', marginBottom:24 }}>{q.text}</p>
-            <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-              {q.options.map((opt,i) => {
-                const letter = opt[0];
-                const sel = answers[q.id] === letter;
-                return (
-                  <button key={i} onClick={()=>setAnswers(v=>({...v,[q.id]:letter}))} style={{ padding:'16px', borderRadius:'var(--r-md)', border:`2px solid ${sel?'var(--clr-primary)':'var(--clr-border)'}`, background:sel?'var(--clr-primary-50)':'white', textAlign:'left', fontSize:'0.9rem', width:'100%', cursor:'pointer' }}>
-                    {opt}
+        {/* Main Testing Area */}
+        <div style={{ flex: 1, padding: 40, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+          {q ? (
+            <div style={{ maxWidth: 800, margin: '0 auto', width: '100%' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 32, alignItems: 'center' }}>
+                <span className="badge badge-primary">Mathematics</span>
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <button 
+                    onClick={() => toggleFlag(q.id)}
+                    className="btn btn-sm" 
+                    style={{ background: flagged.has(q.id) ? '#FEF3C7' : 'transparent', color: flagged.has(q.id) ? '#D97706' : 'var(--clr-text-muted)', border: '1px solid #e2e8f0' }}
+                  >
+                    {flagged.has(q.id) ? <FlagOff size={16} /> : <Flag size={16} />} 
+                    <span style={{ marginLeft: 8 }}>{flagged.has(q.id) ? 'Unflag' : 'Flag for Review'}</span>
                   </button>
-                );
-              })}
+                </div>
+              </div>
+
+              <div className="card" style={{ padding: 40, background: 'white', borderRadius: 24, boxShadow: 'var(--shadow-sm)', marginBottom: 32 }}>
+                <h2 style={{ fontSize: '1.5rem', lineHeight: 1.6, fontWeight: 700, color: '#1E293B', marginBottom: 40 }}>{q.text}</h2>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16 }}>
+                  {['A', 'B', 'C', 'D'].map((letter, i) => {
+                    const optionText = q[`option${letter}`];
+                    const isSelected = answers[q.id] === letter;
+                    return (
+                      <button 
+                        key={i} 
+                        onClick={() => setAnswers(v => ({ ...v, [q.id]: letter }))}
+                        style={{ 
+                          padding: '20px 24px', textAlign: 'left', borderRadius: 16, border: isSelected ? '2px solid var(--clr-primary)' : '2px solid #E2E8F0',
+                          background: isSelected ? 'var(--clr-primary-50)' : 'white', fontSize: '1.1rem', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 16
+                        }}
+                      >
+                         <div style={{ width: 32, height: 32, borderRadius: 10, background: isSelected ? 'var(--clr-primary)' : '#F1F5F9', color: isSelected ? 'white' : '#64748B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', fontWeight: 900 }}>{letter}</div>
+                         {optionText}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: 16 }}>
+                <button onClick={() => setCurrent(v => Math.max(0, v - 1))} disabled={current === 0} style={{ flex: 1, height: 64, borderRadius: 16 }} className="btn btn-outline"><ChevronLeft /> Back</button>
+                <button onClick={() => setCurrent(v => Math.min(examData.length - 1, v + 1))} disabled={current === examData.length - 1} style={{ flex: 1, height: 64, borderRadius: 16 }} className="btn btn-primary">Next <ChevronRight /></button>
+              </div>
             </div>
-          </div>
-
-          <div style={{ display:'flex', gap:10, marginTop:'auto' }}>
-            <button onClick={()=>setCurrent(v=>Math.max(0,v-1))} disabled={current===0} className="btn btn-outline" style={{ flex:1, padding:'14px' }}><ChevronLeft size={18} /></button>
-            <button onClick={()=>setCurrent(v=>Math.min(examQuestions.length-1,v+1))} disabled={current===examQuestions.length-1} className="btn btn-primary" style={{ flex:2, padding:'14px' }}>Next <ChevronRight size={18} /></button>
-          </div>
-        </div>
-
-        {/* Question grid (Desktop Overlay / Mobile Hidden) */}
-        <div className="mobile-hidden" style={{ width:200, background:'white', borderLeft:'1px solid var(--clr-border-light)', padding:16, overflowY:'auto' }}>
-          <div style={{ fontSize:'0.7rem', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.08em', color:'var(--clr-text-muted)', marginBottom:12 }}>Question Map</div>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:4 }}>
-            {examQuestions.map((qn,i) => (
-              <button key={qn.id} onClick={()=>setCurrent(i)} style={{ aspectRatio:'1', borderRadius:6, border:`2px solid ${i===current?'var(--clr-primary)':answers[qn.id]?'var(--clr-primary)':flagged.has(qn.id)?'var(--clr-warning)':'var(--clr-border)'}`, background: i===current?'var(--clr-primary)':answers[qn.id]?'var(--clr-primary-100)':flagged.has(qn.id)?'var(--clr-warning-bg)':'transparent', color: i===current?'white':'var(--clr-text-primary)', fontSize:'0.65rem', fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                {i+1}
-              </button>
-            ))}
-          </div>
+          ) : (
+             <div className="text-center" style={{ marginTop: 100 }}>
+                <AlertCircle size={64} className="text-muted" style={{ marginBottom: 16 }} />
+                <h3>No questions in this pack</h3>
+                <button className="btn btn-primary mt-4" onClick={() => setStarted(false)}>Go Back</button>
+             </div>
+          )}
         </div>
       </div>
     </div>

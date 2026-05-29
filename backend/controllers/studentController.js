@@ -91,23 +91,137 @@ const getPracticeQuestions = async (req, res) => {
   }
 };
 
-const submitExam = async (req, res) => {
+const startExamSession = async (req, res) => {
   try {
-    const { score, total, duration, subjectBreakdown } = req.body;
+    const { subjectId, examType = 'JAMB', questionCount = 40 } = req.body;
     const userId = req.user.id;
 
-    const attempt = await prisma.examAttempt.create({
+    // Get or Create student profile (Self-healing)
+    let student = await prisma.studentProfile.findUnique({ where: { userId } });
+    
+    if (!student) {
+      console.log(`Creating missing profile for user ${userId}`);
+      student = await prisma.studentProfile.create({
+        data: { userId }
+      });
+    }
+
+    // Create a new session
+    const session = await prisma.examSession.create({
       data: {
-        userId,
-        score,
-        total,
-        duration,
-        subjectBreakdown: JSON.stringify(subjectBreakdown),
+        studentId: student.id,
+        subjectId: subjectId,
+        examType: examType,
       },
     });
 
-    res.json(attempt);
+    // Fetch randomized questions for this subject
+    const questions = await prisma.$queryRawUnsafe(
+      `SELECT * FROM Question WHERE subjectId = '${subjectId}' ORDER BY RANDOM() LIMIT ${parseInt(questionCount)}`
+    );
+
+    res.json({
+      sessionId: session.id,
+      questions: questions.map(q => ({
+        ...q,
+        options: [q.optionA, q.optionB, q.optionC, q.optionD],
+      }))
+    });
   } catch (error) {
+    console.error('Start Exam Error:', error);
+    res.status(500).json({ message: 'Error starting exam session', error: error.message });
+  }
+};
+
+const finishExamSession = async (req, res) => {
+  try {
+    const { sessionId, responses } = req.body; // responses: [{ questionId, selectedOption }]
+    const userId = req.user.id;
+
+    const session = await prisma.examSession.findUnique({ 
+      where: { id: sessionId },
+      include: { results: true }
+    });
+    if (!session) return res.status(404).json({ message: 'Session not found' });
+
+    let correctCount = 0;
+    const totalCount = responses.length;
+
+    // Process each response
+    const student = await prisma.studentProfile.findUnique({ where: { userId } });
+
+    for (const resp of responses) {
+      const q = await prisma.question.findUnique({ where: { id: resp.questionId } });
+      const isCorrect = q.correctOption === resp.selectedOption;
+      if (isCorrect) correctCount++;
+
+      await prisma.studentResponse.create({
+        data: {
+          studentId: student.id,
+          questionId: resp.questionId,
+          selectedOption: resp.selectedOption,
+          isCorrect: isCorrect
+        }
+      });
+    }
+
+    const scorePercentage = (correctCount / totalCount) * 100;
+
+    // Save final result
+    const result = await prisma.examResult.create({
+      data: {
+        studentId: student.id,
+        sessionId: sessionId,
+        score: scorePercentage,
+        correct: correctCount,
+        total: totalCount
+      }
+    });
+
+    // --- SMARTER STREAK LOGIC ---
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const lastActive = new Date(student.lastActive);
+    lastActive.setHours(0, 0, 0, 0);
+
+    const diffTime = Math.abs(today - lastActive);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    let newStreak = student.streak;
+
+    if (diffDays === 1) {
+      // Perfect! Yesterday was active, today is a new day.
+      newStreak += 1;
+    } else if (diffDays > 1) {
+      // Oh no, they missed a day. Reset to 1.
+      newStreak = 1;
+    } else if (student.streak === 0) {
+      // First time ever? Start at 1.
+      newStreak = 1;
+    }
+    // If diffDays === 0, they already boosted their streak today. Keep it the same.
+
+    // Award Points & Update Streak
+    const pointsAwarded = Math.round(scorePercentage * 2);
+    await prisma.studentProfile.update({
+      where: { id: student.id },
+      data: {
+        points: { increment: pointsAwarded },
+        streak: newStreak,
+        lastActive: new Date()
+      }
+    });
+
+    res.json({
+      result,
+      pointsAwarded,
+      newStreak,
+      message: 'Exam submitted successfully!'
+    });
+
+  } catch (error) {
+    console.error('Finish Exam Error:', error);
     res.status(500).json({ message: 'Error submitting exam' });
   }
 };
@@ -124,7 +238,6 @@ const getLeaderboard = async (req, res) => {
       take: 20,
     });
     
-    // Map the data to match the expected frontend format
     const formattedLeaderboard = students.map(s => ({
       id: s.id,
       firstName: s.user.firstName,
@@ -147,6 +260,7 @@ module.exports = {
   getLessons,
   updateProgress,
   getPracticeQuestions,
-  submitExam,
+  startExamSession,
+  finishExamSession,
   getLeaderboard,
 };

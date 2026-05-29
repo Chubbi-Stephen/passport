@@ -71,17 +71,31 @@ const getCurrentUser = async (req, res) => {
         firstName: true,
         lastName: true,
         tier: true,
-        points: true,
-        streak: true,
         school: true,
         class: true,
-        state: true
+        state: true,
+        // Streak & Points live on the StudentProfile relation
+        studentProfile: {
+          select: {
+            streak: true,
+            points: true,
+            lastActive: true,
+          }
+        }
       }
     });
     if (!user) return res.status(404).json({ message: 'User not found' });
-    res.json(user);
+
+    // Flatten so the frontend sees streak/points at the top level
+    const { studentProfile, ...rest } = user;
+    res.json({
+      ...rest,
+      streak: studentProfile?.streak ?? 0,
+      points: studentProfile?.points ?? 0,
+      lastActive: studentProfile?.lastActive ?? null,
+    });
   } catch (error) {
-    console.error(error);
+    console.error('getCurrentUser error:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 };
