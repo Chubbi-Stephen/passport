@@ -6,23 +6,28 @@ const getDashboardData = async (req, res) => {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       include: {
-        progress: { include: { lesson: true } },
-        attempts: { orderBy: { date: 'desc' }, take: 5 },
+        studentProfile: {
+          include: {
+            results: { orderBy: { createdAt: 'desc' }, take: 5 }
+          }
+        }
       },
     });
 
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
     res.json({
       user: {
-        firstName: user.firstName,
-        streak: user.streak,
-        points: user.points,
-        tier: user.tier,
+        firstName: user.firstName || user.name || 'Student',
+        streak: user.studentProfile?.streak || 0,
+        points: user.studentProfile?.points || 0,
+        tier: user.tier || 'FREE',
       },
-      recentAttempts: user.attempts,
-      overallProgress: user.progress.length,
+      recentAttempts: user.studentProfile?.results || [],
+      overallProgress: 0, // Placeholder until lessons table is re-added
     });
   } catch (error) {
-    console.error(error);
+    console.error('Dashboard Error:', error);
     res.status(500).json({ message: 'Error fetching dashboard data' });
   }
 };
@@ -63,7 +68,11 @@ const getPracticeQuestions = async (req, res) => {
     
     let subId = subjectId;
     if (!subId && subject) {
-      const sub = await prisma.subject.findFirst({ where: { name: subject } });
+      const sub = await prisma.subject.findFirst({ 
+        where: { 
+          name: { equals: subject } 
+        } 
+      });
       if (sub) subId = sub.id;
     }
 
@@ -105,14 +114,30 @@ const submitExam = async (req, res) => {
 
 const getLeaderboard = async (req, res) => {
   try {
-    const users = await prisma.user.findMany({
-      where: { role: 'STUDENT' },
-      select: { id: true, firstName: true, lastName: true, school: true, state: true, points: true, streak: true },
+    const students = await prisma.studentProfile.findMany({
+      include: {
+        user: {
+          select: { firstName: true, lastName: true, school: true, state: true }
+        }
+      },
       orderBy: { points: 'desc' },
       take: 20,
     });
-    res.json(users);
+    
+    // Map the data to match the expected frontend format
+    const formattedLeaderboard = students.map(s => ({
+      id: s.id,
+      firstName: s.user.firstName,
+      lastName: s.user.lastName,
+      school: s.user.school,
+      state: s.user.state,
+      points: s.points,
+      streak: s.streak
+    }));
+
+    res.json(formattedLeaderboard);
   } catch (error) {
+    console.error('Leaderboard Error:', error);
     res.status(500).json({ message: 'Error fetching leaderboard' });
   }
 };

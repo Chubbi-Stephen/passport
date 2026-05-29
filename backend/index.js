@@ -17,11 +17,13 @@ const authRoutes = require('./routes/auth');
 const studentRoutes = require('./routes/student');
 const parentRoutes = require('./routes/parent');
 const paymentRoutes = require('./routes/payment');
+const adminRoutes = require('./routes/admin');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/student', studentRoutes);
 app.use('/api/parent', parentRoutes);
 app.use('/api/payment', paymentRoutes);
+app.use('/api/admin', adminRoutes);
 
 app.get('/', (req, res) => {
   res.send('PassPort API is running...');

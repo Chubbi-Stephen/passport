@@ -51,11 +51,10 @@ export default function StudentDashboard() {
   if (loading) return <div style={{ display:'flex', minHeight:'50vh', alignItems:'center', justifyContent:'center', color:'var(--clr-primary)', fontWeight:700 }}>Loading Dashboard...</div>;
   if (!data) return null;
 
-  const { user, recentAttempts, overallProgress } = data;
+  const { user, recentAttempts = [], overallProgress = 0 } = data || {};
 
   return (
     <>
-
           {/* Exam countdown banner */}
           <div style={{ background:'linear-gradient(135deg, #071812, #0A6640)', borderRadius:'var(--r-xl)', padding:'20px 28px', marginBottom:24, display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:16 }}>
             <div>
@@ -63,11 +62,11 @@ export default function StudentDashboard() {
               <div style={{ fontFamily:'var(--font-display)', fontSize:'1.5rem', fontWeight:800, color:'white' }}>
                 <span style={{ color:'var(--clr-accent)', fontSize:'2.5rem' }}>47</span> days remaining
               </div>
-              <div style={{ fontSize:'0.8125rem', color:'rgba(255,255,255,0.5)', marginTop:6 }}>Exam date: 23 June 2025 · Tier: <span style={{ color:'var(--clr-accent)', fontWeight:700 }}>{user.tier}</span></div>
+              <div style={{ fontSize:'0.8125rem', color:'rgba(255,255,255,0.5)', marginTop:6 }}>Exam date: 23 June 2025 · Tier: <span style={{ color:'var(--clr-accent)', fontWeight:700 }}>{user?.tier || 'FREE'}</span></div>
             </div>
             <div style={{ display:'flex', gap:12, alignItems:'center' }}>
               <div style={{ textAlign:'center' }}>
-                <div style={{ fontFamily:'var(--font-display)', fontSize:'2rem', fontWeight:800, color:'var(--clr-accent)' }}>{user.points > 200 ? '287' : '---'}</div>
+                <div style={{ fontFamily:'var(--font-display)', fontSize:'2rem', fontWeight:800, color:'var(--clr-accent)' }}>{(user?.points || 0) > 200 ? '287' : '---'}</div>
                 <div style={{ fontSize:'0.7rem', color:'rgba(255,255,255,0.4)' }}>Predicted Score</div>
               </div>
               <Link to="/exam"><button className="btn btn-accent" style={{ borderRadius:999, gap:8 }}><Target size={18} /> Take Mock Exam</button></Link>
@@ -76,11 +75,12 @@ export default function StudentDashboard() {
 
           {/* Stats row */}
           <div className="grid-4" style={{ marginBottom:24 }}>
-            <StatCard icon={Flame} label="Study Streak" value={user.streak} sub="days in a row" color="#F4A924" />
+            <StatCard icon={Flame} label="Study Streak" value={user?.streak || 0} sub="days in a row" color="#F4A924" />
             <StatCard icon={BookOpen} label="Lessons Done" value={overallProgress} sub="total completed" color="#0A6640" />
-            <StatCard icon={BarChart3} label="Avg Mock Score" value={recentAttempts.length ? `${Math.round(recentAttempts.reduce((acc,curr)=>acc+curr.score,0)/recentAttempts.length)}%` : '0%'} sub="last sessions" color="#2563EB" />
-            <StatCard icon={Gem} label="PassPort Points" value={user.points} sub="rank: Silver" color="#16A34A" />
+            <StatCard icon={BarChart3} label="Avg Mock Score" value={recentAttempts?.length ? `${Math.round(recentAttempts.reduce((acc,curr)=>acc+curr.score,0)/recentAttempts.length)}%` : '0%'} sub="last sessions" color="#2563EB" />
+            <StatCard icon={Gem} label="PassPort Points" value={user?.points || 0} sub="rank: Silver" color="#16A34A" />
           </div>
+
 
           <div className="grid-2" style={{ marginBottom:24 }}>
             {/* Recent Mocks */}
@@ -117,11 +117,11 @@ export default function StudentDashboard() {
             <div className="card">
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
                 <h3 style={{ fontFamily:'var(--font-display)', fontWeight:700, fontSize:'0.9375rem', display:'flex', alignItems:'center', gap:8 }}>Weekly Progress <Flame size={16} color="var(--clr-accent)" /></h3>
-                <span style={{ fontFamily:'var(--font-display)', fontSize:'1.25rem', fontWeight:800, color:'var(--clr-accent)' }}>{user.streak}</span>
+                <span style={{ fontFamily:'var(--font-display)', fontSize:'1.25rem', fontWeight:800, color:'var(--clr-accent)' }}>{user?.streak || 0}</span>
               </div>
               <div style={{ display:'flex', gap:8, justifyContent:'space-between', flexWrap:'wrap' }}>
                 {['M','T','W','T','F','S','S'].map((day, i) => {
-                  const isActive = i < (user.streak % 7);
+                  const isActive = i < ((user?.streak || 0) % 7);
                   return (
                     <div key={i} style={{ flex:'1 1 auto', minWidth:32, textAlign:'center' }}>
                       <div style={{ height:36, borderRadius:8, background: isActive ? 'linear-gradient(135deg, var(--clr-accent), #e8961a)' : 'var(--clr-bg)', border: isActive ? 'none' : '1px solid var(--clr-border)', display:'flex', alignItems:'center', justifyContent:'center', color:'white', marginBottom:6 }}>

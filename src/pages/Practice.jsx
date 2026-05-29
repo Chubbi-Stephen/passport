@@ -31,24 +31,58 @@ export default function Practice() {
   const [timedMode, setTimedMode] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  // Audio feedback
+  const playSound = (type) => {
+    try {
+      const audio = new Audio(type === 'correct' 
+        ? 'https://cdn.freesound.org/previews/270/270404_5123851-lq.mp3' // Crisp Level Up
+        : 'https://cdn.freesound.org/previews/415/415764_6090639-lq.mp3'); // Error buzz
+      audio.volume = 0.6; // Boosted volume
+      audio.play();
+    } catch (e) {
+      console.warn('Audio play failed', e);
+    }
+  };
+
+  // Haptic feedback
+  const triggerHaptic = (type) => {
+    if (window.navigator && window.navigator.vibrate) {
+      if (type === 'correct') window.navigator.vibrate([10, 30, 10]);
+      else window.navigator.vibrate([50, 100, 50]);
+    }
+  };
+
   useEffect(() => {
     const fetchQuestions = async () => {
       setLoading(true);
       try {
         const params = {};
-        if (selSubject !== 'All') params.subject = selSubject;
-        if (selYear !== 'All Years') params.year = selYear;
+        if (selSubject && selSubject !== 'All') params.subject = selSubject;
+        if (selYear && selYear !== 'All' && selYear !== 'All Years') params.year = selYear;
         
         const data = await api.getPractice(params);
-        setQuestions(data.map(q => ({
-          ...q,
-          options: JSON.parse(q.options)
-        })));
-        setCurrent(0);
-        setSelected({});
-        setRevealed({});
+        
+        if (data && Array.isArray(data)) {
+          setQuestions(data.map(q => ({
+            ...q,
+            // Format options clearly for comparison
+            formattedOptions: [
+              { letter: 'A', text: q.optionA },
+              { letter: 'B', text: q.optionB },
+              { letter: 'C', text: q.optionC },
+              { letter: 'D', text: q.optionD }
+            ].filter(o => o.text),
+            answer: q.correctOption,
+          })));
+          setCurrent(0);
+          setSelected({});
+          setRevealed({});
+        } else {
+          setQuestions([]);
+        }
       } catch (err) {
         console.error(err);
+        if (err.message.includes('401')) navigate('/login');
       } finally {
         setLoading(false);
       }
@@ -63,14 +97,20 @@ export default function Practice() {
     return found && found.answer === ans;
   }).length;
 
-  function handleSelect(qId, opt) {
+  function handleSelect(qId, letter) {
     if (revealed[qId]) return;
-    setSelected(v => ({ ...v, [qId]: opt[0] }));
+    setSelected(v => ({ ...v, [qId]: letter }));
+    if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(10);
   }
 
   function handleReveal(qId) {
     if (!selected[qId]) return;
     setRevealed(v => ({ ...v, [qId]: true }));
+    
+    // Feedback Trigger
+    const correct = selected[qId] === q.answer;
+    playSound(correct ? 'correct' : 'error');
+    triggerHaptic(correct ? 'correct' : 'error');
   }
 
   const handleEndSession = async () => {
@@ -80,7 +120,7 @@ export default function Practice() {
       await api.submitExam({
         score: totalCorrect,
         total: questions.length,
-        duration: 0, // Simplified for practice
+        duration: 0,
         answers: Object.entries(selected).map(([id, ans]) => ({ id, ans }))
       });
       navigate('/dashboard');
@@ -92,122 +132,164 @@ export default function Practice() {
   };
 
   return (
-    <>
-      <div className="grid-2-dynamic" style={{ display:'grid', gridTemplateColumns:'280px 1fr', gap:24 }}>
-        {/* Sidebar filters + question list */}
-        <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
-          {/* Filters */}
-          <div className="card" style={{ padding:20 }}>
-            <h3 style={{ fontFamily:'var(--font-display)', fontWeight:700, fontSize:'0.9375rem', marginBottom:16, display:'flex', alignItems:'center', gap:8 }}><Filter size={16} /> Filters</h3>
-            <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-              <div className="form-group">
-                <label className="form-label" style={{ fontSize:'0.75rem' }}>Subject</label>
-                <select className="form-select" value={selSubject} onChange={e=>setSelSubject(e.target.value)} style={{ fontSize:'0.8125rem', padding:'8px 12px' }}>
-                  {subjectList.map(s => <option key={s}>{s}</option>)}
-                </select>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 800, margin: '0 auto', paddingBottom: 140 }}>
+      {/* Compact Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'var(--clr-bg-card)', borderRadius: 'var(--r-lg)', border: '1px solid var(--clr-border)', gap: 12 }}>
+        <div style={{ display: 'flex', gap: 8, flex: 1 }}>
+          <select className="form-select" value={selSubject} onChange={e=>setSelSubject(e.target.value)} style={{ padding: '4px 24px 4px 12px', fontSize: '0.75rem', height: 32 }}>
+            {subjectList.map(s => <option key={s}>{s}</option>)}
+          </select>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: '0.6rem', color: 'var(--clr-text-muted)', fontWeight: 700 }}>SCORE</div>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', fontWeight: 800, color: 'var(--clr-primary)', lineHeight: 1 }}>{totalAnswered > 0 ? Math.round((totalCorrect/totalAnswered)*100) : 0}%</div>
+          </div>
+          <button onClick={handleEndSession} className="btn btn-dark" style={{ height: 32, padding: '0 12px', fontSize: '0.75rem', borderRadius: 8 }}>End</button>
+        </div>
+      </div>
+
+      {/* Main Focus Area */}
+      {loading ? (
+        <div className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 300 }}>Loading Questions...</div>
+      ) : q ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div className={`card ${revealed[q.id] ? (selected[q.id] === q.answer ? 'animate-fadeIn' : 'animate-shake') : 'animate-fadeIn'}`} style={{ padding: '32px 24px', border: '1px solid var(--clr-border)', boxShadow: 'var(--shadow-sm)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 24, alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <span className="badge badge-primary">{q.subject?.name}</span>
               </div>
-              <div className="form-group">
-                <label className="form-label" style={{ fontSize:'0.75rem' }}>Year</label>
-                <select className="form-select" value={selYear} onChange={e=>setSelYear(e.target.value)} style={{ fontSize:'0.8125rem', padding:'8px 12px' }}>
-                  {yearList.map(y => <option key={y}>{y}</option>)}
-                </select>
-              </div>
+              <span style={{ fontSize: '0.8125rem', fontWeight: 800, color: 'var(--clr-text-muted)', background: 'var(--clr-border-light)', padding: '4px 12px', borderRadius: 6 }}>
+                {current + 1} / {questions.length}
+              </span>
             </div>
-          </div>
 
-          <div style={{ padding:'16px 20px', background:'linear-gradient(135deg, var(--clr-primary), var(--clr-primary-light))', borderRadius:'var(--r-lg)' }}>
-            <div style={{ fontSize:'0.7rem', color:'rgba(255,255,255,0.6)', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:8 }}>Session Score</div>
-            <div style={{ fontFamily:'var(--font-display)', fontSize:'2rem', fontWeight:800, color:'white' }}>{totalAnswered > 0 ? Math.round((totalCorrect/totalAnswered)*100) : 0}%</div>
-            <div style={{ fontSize:'0.8125rem', color:'rgba(255,255,255,0.7)', marginTop:4 }}>{totalCorrect}/{totalAnswered} correct</div>
-          </div>
+            <h2 style={{ fontSize: '1.4rem', fontWeight: 700, lineHeight: 1.5, marginBottom: 32, color: 'var(--clr-text-primary)' }}>
+              {q.text}
+            </h2>
 
-          <button onClick={handleEndSession} disabled={submitting} className="btn btn-dark w-full" style={{ justifyContent:'center', gap:8 }}>
-            {submitting ? 'Saving...' : <><Save size={18} /> End & Save Session</>}
-          </button>
-
-          <div className="card" style={{ padding:0, overflow:'hidden' }}>
-            <div style={{ padding:'14px 16px', borderBottom:'1px solid var(--clr-border-light)', fontSize:'0.8125rem', fontWeight:600 }}>{questions.length} Questions</div>
-            <div style={{ overflowY:'auto', maxHeight:400 }}>
-              {questions.map((q, i) => {
-                const rev = revealed[q.id];
-                const correct = selected[q.id] === q.answer;
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12, marginBottom: 8 }}>
+              {q.formattedOptions.map((opt, i) => {
+                const isSelected = selected[q.id] === opt.letter;
+                const isCorrect = opt.letter === q.answer;
+                const isRevealed = revealed[q.id];
+                
+                let bg = 'var(--clr-bg-card)';
+                let border = 'var(--clr-border)';
+                let color = 'var(--clr-text-primary)';
+                
+                if (isRevealed && isCorrect) { bg = 'var(--clr-success-bg)'; border = 'transparent'; color = 'var(--clr-success)'; }
+                else if (isRevealed && isSelected && !isCorrect) { bg = 'var(--clr-danger-bg)'; border = 'transparent'; color = 'var(--clr-danger)'; }
+                else if (isSelected) { bg = 'rgba(10,102,64,0.05)'; border = 'var(--clr-primary)'; color = 'var(--clr-primary)'; }
+                
                 return (
-                  <button key={q.id} onClick={()=>setCurrent(i)} style={{ width:'100%', padding:'12px 16px', borderBottom:'1px solid var(--clr-border-light)', textAlign:'left', background: i===current ? 'var(--clr-primary-50)' : 'white', display:'flex', gap:10, alignItems:'center', cursor:'pointer', border:'none' }}>
-                    <div style={{ width:24, height:24, borderRadius:'50%', background: rev ? (correct?'var(--clr-success-bg)':'var(--clr-danger-bg)') : i===current?'var(--clr-primary)':'var(--clr-border)', color: rev ? (correct?'var(--clr-success)':'var(--clr-danger)') : i===current?'white':'var(--clr-text-muted)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'0.7rem', fontWeight:700, flexShrink:0 }}>
-                      {rev ? (correct?<CheckCircle2 size={14} />:<XCircle size={14} />) : i+1}
+                  <button 
+                    key={i} 
+                    onClick={() => handleSelect(q.id, opt.letter)} 
+                    className={isSelected ? 'animate-pop' : ''}
+                    style={{ 
+                      padding: '20px', borderRadius: 16, border: `2px solid ${border}`, background: bg, color: color, textAlign: 'left', fontSize: '1.05rem', cursor: isRevealed ? 'default' : 'pointer', fontWeight: isSelected || (isCorrect && isRevealed) ? 700 : 500, display: 'flex', alignItems: 'center', gap: 16, transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)', transform: isSelected && !isRevealed ? 'scale(1.02)' : 'none', position: 'relative'
+                    }}
+                  >
+                    <div style={{ width: 32, height: 32, borderRadius: 10, background: isSelected ? 'var(--clr-primary)' : 'var(--clr-border-light)', color: isSelected ? 'white' : 'var(--clr-text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', fontWeight: 900, flexShrink: 0 }}>
+                      {opt.letter}
                     </div>
-                    <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ fontSize:'0.75rem', fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{q.subject?.name} {q.year}</div>
-                      <div style={{ fontSize:'0.7rem', color:'var(--clr-text-muted)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{q.topic}</div>
-                    </div>
+                    {opt.text}
                   </button>
                 );
               })}
             </div>
           </div>
-        </div>
 
-        {/* Question panel */}
-        <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
-          {loading ? (
-            <div className="card" style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', minHeight:400 }}>Loading questions...</div>
-          ) : q ? (
-            <>
-              <div className="card" style={{ flex:1 }}>
-                <div style={{ display:'flex', gap:10, marginBottom:20, alignItems:'center', flexWrap:'wrap' }}>
-                  <span className="badge badge-primary">{q.subject?.name}</span>
-                  <span className="badge badge-accent">{q.year}</span>
-                  <span style={{ marginLeft:'auto', fontSize:'0.8125rem', color:'var(--clr-text-muted)' }}>Q{current+1} of {questions.length}</span>
-                </div>
-
-                <p style={{ fontSize:'1.0625rem', fontWeight:500, lineHeight:1.75, marginBottom:28, color:'var(--clr-text-primary)' }}>{q.text}</p>
-
-                <div style={{ display:'flex', flexDirection:'column', gap:12, marginBottom:28 }}>
-                  {q.options.map((opt, i) => {
-                    const letter = opt[0];
-                    const isSelected = selected[q.id] === letter;
-                    const isCorrect = letter === q.answer;
-                    const isRevealed = revealed[q.id];
-                    let bg = 'white', border = 'var(--clr-border)', color = 'var(--clr-text-primary)';
-                    if (isRevealed && isCorrect) { bg = 'var(--clr-success-bg)'; border = 'var(--clr-success)'; color = 'var(--clr-success)'; }
-                    else if (isRevealed && isSelected && !isCorrect) { bg = 'var(--clr-danger-bg)'; border = 'var(--clr-danger)'; color = 'var(--clr-danger)'; }
-                    else if (isSelected) { bg = 'var(--clr-primary-50)'; border = 'var(--clr-primary)'; color = 'var(--clr-primary)'; }
-                    return (
-                      <button key={i} onClick={() => handleSelect(q.id, opt)} style={{ padding:'14px 18px', borderRadius:'var(--r-md)', border:`1.5px solid ${border}`, background:bg, color, textAlign:'left', fontSize:'0.9375rem', cursor: isRevealed?'default':'pointer', fontWeight: isSelected||(isCorrect&&isRevealed) ? 600 : 400 }}>
-                        {opt}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {revealed[q.id] && (
-                  <div className="animate-fadeInUp" style={{ padding:'16px 20px', background:'var(--clr-primary-50)', borderRadius:'var(--r-md)', border:'1px solid var(--clr-primary-100)' }}>
-                    <div style={{ fontWeight:700, color:'var(--clr-primary)', marginBottom:8, display:'flex', gap:8, alignItems:'center' }}>
-                      <Lightbulb size={18} /> Explanation:
-                    </div>
-                    <p style={{ fontSize:'0.9rem', color:'var(--clr-text-secondary)', lineHeight:1.7 }}>{q.explanation}</p>
-                  </div>
-                )}
-              </div>
-
-              <div style={{ display:'flex', gap:12 }}>
-                <button onClick={()=>setCurrent(v=>Math.max(0,v-1))} disabled={current===0} className="btn btn-outline" style={{ flex:1, justifyContent:'center', gap:8 }}><ChevronLeft size={18} /> Previous</button>
-                {!revealed[q.id] ? (
-                  <button onClick={()=>handleReveal(q.id)} disabled={!selected[q.id]} className="btn btn-primary" style={{ flex:2, justifyContent:'center', gap:8 }}>Check Answer</button>
-                ) : (
-                  <button onClick={()=>setCurrent(v=>Math.min(questions.length-1,v+1))} className="btn btn-accent" style={{ flex:2, justifyContent:'center', gap:8 }}>Next Question <ChevronRight size={18} /></button>
-                )}
-              </div>
-            </>
-          ) : (
-            <div className="card" style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:400, flexDirection:'column', gap:16 }}>
-              <div style={{ color:'var(--clr-text-muted)', opacity:0.3 }}><SearchX size={64} /></div>
-              <h3 style={{ fontFamily:'var(--font-display)', fontWeight:700 }}>No results</h3>
-              <button onClick={()=>{setSelSubject('All'); setSelYear('All Years');}} className="btn btn-ghost">Clear Filters</button>
+          {!revealed[q.id] && (
+            <div style={{ padding: '0 8px' }}>
+              <button 
+                onClick={() => handleReveal(q.id)} 
+                disabled={!selected[q.id]} 
+                className="btn btn-primary w-full" 
+                style={{ height: 56, borderRadius: 16, fontSize: '1.1rem', textTransform: 'uppercase', letterSpacing: '0.05em', boxShadow: selected[q.id] ? '0 8px 16px rgba(10,102,64,0.3)' : 'none' }}
+              >
+                Check Answer
+              </button>
             </div>
           )}
         </div>
-      </div>
-    </>
+      ) : (
+        <div className="card text-center" style={{ padding: 60, borderRadius: 24 }}>
+          <SearchX size={64} className="text-muted" style={{ marginBottom: 16, opacity: 0.2 }} />
+          <h3 style={{ fontWeight: 800 }}>No Questions Loaded</h3>
+          <p className="text-muted">Pick a subject or import some questions to start.</p>
+        </div>
+      )}
+
+      {/* Answer Feedback Bar (The Duolingo Feel) */}
+      {q && revealed[q.id] && (
+        <div className="animate-fadeInUp" style={{ 
+          position: 'fixed', bottom: 0, left: 0, right: 0, 
+          background: selected[q.id] === q.answer ? '#dcfce7' : '#fee2e2',
+          padding: '24px 32px 40px', zIndex: 1000,
+          borderTop: `2px solid ${selected[q.id] === q.answer ? '#86efac' : '#fca5a5'}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center'
+        }}>
+          <div style={{ maxWidth: 800, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20 }}>
+            {/* Left side: Icon + Text */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <div style={{ 
+                width: 56, height: 56, borderRadius: '50%', 
+                background: selected[q.id] === q.answer ? '#16a34a' : '#dc2626',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white'
+              }}>
+                {selected[q.id] === q.answer ? <CheckCircle2 size={32} /> : <XCircle size={32} />}
+              </div>
+              <div>
+                <h3 style={{ 
+                  fontFamily: 'var(--font-display)', fontSize: '1.5rem', fontWeight: 800, 
+                  color: selected[q.id] === q.answer ? '#166534' : '#991b1b', margin: 0 
+                }}>
+                  {selected[q.id] === q.answer ? 'Excellent!' : 'Correct Answer:'}
+                </h3>
+                <p style={{ color: selected[q.id] === q.answer ? '#14532d' : '#7f1d1d', fontWeight: 600, fontSize: '1.1rem', margin: 0 }}>
+                  {selected[q.id] === q.answer ? 'You found the right solution.' : `It was Option ${q.answer}`}
+                </p>
+              </div>
+            </div>
+
+            {/* Right side: Action */}
+            <button 
+              onClick={() => setCurrent(v => Math.min(questions.length-1, v+1))} 
+              className="btn"
+              style={{ 
+                height: 56, padding: '0 40px', borderRadius: 16, border: 'none',
+                background: selected[q.id] === q.answer ? '#16a34a' : '#dc2626',
+                color: 'white', fontWeight: 800, fontSize: '1.1rem', textTransform: 'uppercase'
+              }}
+            >
+              Continue
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Navigator Footer */}
+      {!revealed[q?.id] && (
+        <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'var(--clr-bg-sidebar)', padding: '12px 20px', display: 'flex', gap: 8, overflowX: 'auto', borderTop: '1px solid var(--clr-border)', zIndex: 100 }}>
+          {questions.map((qn, i) => {
+            const rev = revealed[qn.id];
+            const isSel = selected[qn.id];
+            const isCorrect = isSel === qn.answer;
+            const isCurrent = i === current;
+            let bg = 'rgba(255,255,255,0.05)', color = 'rgba(255,255,255,0.4)';
+            if (isCurrent) { bg = 'var(--clr-primary)'; color = 'white'; }
+            else if (rev) { bg = isCorrect ? 'var(--clr-success)' : 'var(--clr-danger)'; color = 'white'; }
+            else if (isSel) { bg = 'rgba(255,255,255,0.2)'; color = 'white'; }
+            return (
+              <button key={qn.id} onClick={() => setCurrent(i)} style={{ minWidth: 36, height: 36, borderRadius: 8, background: bg, color: color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700, flexShrink: 0 }}>
+                {i + 1}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }

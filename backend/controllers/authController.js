@@ -22,6 +22,10 @@ const register = async (req, res) => {
         school,
         class: userClass,
         state,
+        // Create student profile automatically if user is a student
+        studentProfile: (role === 'STUDENT' || !role) ? {
+          create: { points: 0, streak: 0 }
+        } : undefined
       },
     });
 

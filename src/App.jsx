@@ -11,6 +11,7 @@ import LiveClasses from './pages/LiveClasses';
 import Leaderboard from './pages/Leaderboard';
 import Upgrade from './pages/Upgrade';
 import Settings from './pages/Settings';
+import QuestionUpload from './pages/admin/QuestionUpload';
 import PaymentVerify from './pages/PaymentVerify';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -37,6 +38,7 @@ export default function App() {
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/upgrade" element={<Upgrade />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/admin/upload" element={<QuestionUpload />} />
           </Route>
 
           {/* Full Screen Pages */}

@@ -100,7 +100,14 @@ input, select, textarea { font-family: inherit; font-size: inherit; outline: non
 @keyframes shimmer { 0% { background-position:-200% 0; } 100% { background-position:200% 0; } }
 @keyframes slideDown { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:translateY(0); } }
 @keyframes countdownBar { from { transform:scaleX(1); } to { transform:scaleX(0); } }
-@keyframes pop { 0%,100% { transform:scale(1); } 50% { transform:scale(1.12); } }
+@keyframes pop { 0% { transform: scale(1); } 50% { transform: scale(1.08); } 100% { transform: scale(1); } }
+.animate-pop { animation: pop 0.2s ease; }
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+.animate-shake { animation: shake 0.4s ease; }
 
 .animate-fadeInUp { animation: fadeInUp 0.6s ease both; }
 .animate-fadeIn   { animation: fadeIn 0.4s ease both; }

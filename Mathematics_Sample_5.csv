@@ -1,0 +1,6 @@
+Question,A,B,C,D,Answer,Topic,Explanation,Year,Difficulty
+"If 2x + 5 = 15, what is x?",5,10,15,20,A,Algebra,"Subtract 5 from both sides (10), then divide by 2.",2024,EASY
+"Solve for y: 3y - 9 = 0",1,2,3,4,C,Algebra,"Add 9 to both sides, then divide by 3.",2024,EASY
+"Find the area of a circle with radius 7",49π,14π,7π,21π,A,Geometry,"Area = πr². So 7 squared is 49.",2023,MEDIUM
+"What is the derivative of x²?",x,2x,2,1,B,Calculus,Using power rule: nx^(n-1).,2022,MEDIUM
+"Evaluate: ∫ 2x dx",x² + c,2x² + c,x + c,2 + c,A,Calculus,Integration is the reverse of differentiation.,2021,HARD

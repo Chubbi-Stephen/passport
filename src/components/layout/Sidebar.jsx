@@ -11,7 +11,8 @@ import {
   ChevronRight,
   LogOut,
   GraduationCap,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  Upload
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -136,6 +137,29 @@ export default function Sidebar({ collapsed, onToggle }) {
               </Link>
             );
           })}
+          
+          <div className="divider" style={{ margin: '12px 12px 8px', opacity: 0.1 }} />
+          <div style={{ padding: '0 14px', fontSize: '0.7rem', fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
+            {!collapsed && 'Administration'}
+          </div>
+          <Link
+            to="/admin/upload"
+            style={{
+              display:'flex', alignItems:'center', gap:12,
+              padding: collapsed ? '12px 0' : '10px 14px',
+              borderRadius:10, justifyContent: collapsed ? 'center' : 'flex-start',
+              color: location.pathname === '/admin/upload' ? 'white' : 'rgba(255,255,255,0.5)',
+              background: location.pathname === '/admin/upload' ? 'rgba(255,255,255,0.1)' : 'transparent',
+              fontWeight: 500,
+              fontSize: '0.875rem',
+              transition: 'all var(--ease)',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = 'white'; }}
+            onMouseLeave={e => { if (location.pathname !== '/admin/upload') { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.5)'; } }}
+          >
+            <Upload size={18} />
+            {!collapsed && <span>Question Upload</span>}
+          </Link>
         </nav>
 
         {/* Bottom user */}
