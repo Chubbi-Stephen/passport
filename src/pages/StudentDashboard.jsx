@@ -120,24 +120,43 @@ export default function StudentDashboard() {
                 <span style={{ fontFamily:'var(--font-display)', fontSize:'1.25rem', fontWeight:800, color:'var(--clr-accent)' }}>{user?.streak || 0}</span>
               </div>
               <div style={{ display:'flex', gap:8, justifyContent:'space-between', flexWrap:'wrap' }}>
-                {['M','T','W','T','F','S','S'].map((day, i) => {
-                  const isActive = i < ((user?.streak || 0) % 7);
-                  return (
-                    <div key={i} style={{ flex:'1 1 auto', minWidth:32, textAlign:'center' }}>
-                      <div style={{ height:36, borderRadius:8, background: isActive ? 'linear-gradient(135deg, var(--clr-accent), #e8961a)' : 'var(--clr-bg)', border: isActive ? 'none' : '1px solid var(--clr-border)', display:'flex', alignItems:'center', justifyContent:'center', color:'white', marginBottom:6 }}>
-                        {isActive ? <Flame size={14} fill="white" /> : ''}
+                {(() => {
+                  const days = ['M','T','W','T','F','S','S'];
+                  const today = new Date();
+                  const todayDow = today.getDay(); // 0=Sun, 1=Mon...
+                  // Convert to Mon=0 index
+                  const todayIdx = todayDow === 0 ? 6 : todayDow - 1;
+                  const streak = user?.streak || 0;
+                  return days.map((day, i) => {
+                    // A day is "active" if it falls within the current streak backwards from today
+                    const daysAgo = todayIdx - i;
+                    const isActive = daysAgo >= 0 && daysAgo < streak;
+                    const isToday = i === todayIdx;
+                    return (
+                      <div key={i} style={{ flex:'1 1 auto', minWidth:32, textAlign:'center' }}>
+                        <div style={{
+                          height:36, borderRadius:8,
+                          background: isActive ? 'linear-gradient(135deg, var(--clr-accent), #e8961a)' : 'var(--clr-bg)',
+                          border: isToday ? '2px solid var(--clr-primary)' : isActive ? 'none' : '1px solid var(--clr-border)',
+                          display:'flex', alignItems:'center', justifyContent:'center', color:'white', marginBottom:6
+                        }}>
+                          {isActive ? <Flame size={14} fill="white" /> : ''}
+                        </div>
+                        <div style={{ fontSize:'0.65rem', color: isToday ? 'var(--clr-primary)' : 'var(--clr-text-muted)', fontWeight: isToday ? 800 : 600 }}>{day}</div>
                       </div>
-                      <div style={{ fontSize:'0.65rem', color:'var(--clr-text-muted)', fontWeight:600 }}>{day}</div>
-                    </div>
-                  );
-                })}
+                    );
+                  });
+                })()}
               </div>
               <div style={{ marginTop:24, padding:16, background:'var(--clr-primary-50)', borderRadius:12 }}>
-                <div style={{ fontSize:'0.8125rem', fontWeight:600, color:'var(--clr-primary)' }}>Goal Progress</div>
+                <div style={{ fontSize:'0.8125rem', fontWeight:600, color:'var(--clr-primary)' }}>Exam Performance</div>
                 <div style={{ display:'flex', justifyContent:'space-between', fontSize:'0.75rem', color:'var(--clr-text-muted)', margin:'8px 0 4px' }}>
-                  <span>3/5 modules done</span><span>60%</span>
+                  <span>{recentAttempts.length} mock{recentAttempts.length !== 1 ? 's' : ''} completed</span>
+                  <span>{recentAttempts.length > 0 ? `${Math.round(recentAttempts.reduce((a,c)=>a+c.score,0)/recentAttempts.length)}% avg` : '0%'}</span>
                 </div>
-                <div className="progress" style={{ height:6 }}><div className="progress-bar" style={{ width:'60%' }} /></div>
+                <div className="progress" style={{ height:6 }}>
+                  <div className="progress-bar" style={{ width: recentAttempts.length > 0 ? `${Math.round(recentAttempts.reduce((a,c)=>a+c.score,0)/recentAttempts.length)}%` : '0%' }} />
+                </div>
               </div>
             </div>
           </div>

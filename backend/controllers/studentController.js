@@ -16,6 +16,14 @@ const getDashboardData = async (req, res) => {
 
     if (!user) return res.status(404).json({ message: 'User not found' });
 
+    // Fetch lessons completed count
+    const completedProgressCount = await prisma.progress.count({
+      where: {
+        userId: userId,
+        completed: true
+      }
+    });
+
     res.json({
       user: {
         firstName: user.firstName || user.name || 'Student',
@@ -24,7 +32,7 @@ const getDashboardData = async (req, res) => {
         tier: user.tier || 'FREE',
       },
       recentAttempts: user.studentProfile?.results || [],
-      overallProgress: 0, // Placeholder until lessons table is re-added
+      overallProgress: completedProgressCount,
     });
   } catch (error) {
     console.error('Dashboard Error:', error);
@@ -34,12 +42,72 @@ const getDashboardData = async (req, res) => {
 
 const getLessons = async (req, res) => {
   try {
+    const userId = req.user.id;
     const lessons = await prisma.lesson.findMany({
       include: { subject: true },
       orderBy: [{ week: 'asc' }, { order: 'asc' }],
     });
-    res.json(lessons);
+
+    const userProgress = await prisma.progress.findMany({
+      where: { userId }
+    });
+
+    const progressMap = {};
+    userProgress.forEach(p => {
+      progressMap[p.lessonId] = p;
+    });
+
+    // Group lessons by subject to compute locked chain
+    const lessonsBySubject = {};
+    lessons.forEach(l => {
+      const subName = l.subject.name;
+      if (!lessonsBySubject[subName]) {
+        lessonsBySubject[subName] = [];
+      }
+      lessonsBySubject[subName].push(l);
+    });
+
+    const formattedLessons = [];
+    Object.keys(lessonsBySubject).forEach(subName => {
+      const subLessons = lessonsBySubject[subName];
+      subLessons.sort((a, b) => {
+        if (a.week !== b.week) return a.week - b.week;
+        return a.order - b.order;
+      });
+
+      let lastCompleted = true; // First lesson is unlocked
+      subLessons.forEach(lesson => {
+        const prog = progressMap[lesson.id];
+        const isCompleted = prog ? prog.completed : false;
+        const isLocked = !lastCompleted;
+
+        formattedLessons.push({
+          id: lesson.id,
+          subject: subName,
+          topic: lesson.topic,
+          duration: lesson.duration,
+          views: lesson.views,
+          week: lesson.week,
+          order: lesson.order,
+          videoUrl: lesson.videoUrl,
+          progress: prog ? prog.percentage : 0,
+          completed: isCompleted,
+          locked: isLocked
+        });
+
+        lastCompleted = isCompleted;
+      });
+    });
+
+    // Sort the output back to week and subject ordering for view simplicity
+    formattedLessons.sort((a, b) => {
+      if (a.week !== b.week) return a.week - b.week;
+      return a.order - b.order;
+    });
+
+    res.json(formattedLessons);
   } catch (error) {
+    console.error('Lessons API Error:', error);
     res.status(500).json({ message: 'Error fetching lessons' });
   }
 };

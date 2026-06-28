@@ -112,4 +112,15 @@ export const api = {
     const res = await fetch(`${API_BASE_URL}/payment/verify?reference=${reference}`, { headers: getHeaders() });
     return res.json();
   },
+
+  // Profile
+  updateProfile: async (profileData) => {
+    const res = await fetch(`${API_BASE_URL}/auth/me`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+      body: JSON.stringify(profileData),
+    });
+    if (!res.ok) throw new Error((await res.json()).message);
+    return res.json();
+  },
 };

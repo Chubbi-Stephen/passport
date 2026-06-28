@@ -12,6 +12,7 @@ export const AuthProvider = ({ children }) => {
       const token = localStorage.getItem('passport_token');
       if (token) {
         const userData = await api.getCurrentUser();
+        localStorage.setItem('passport_user', JSON.stringify(userData));
         setUser(userData);
       }
     } catch (err) {
